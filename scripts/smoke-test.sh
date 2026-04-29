@@ -66,8 +66,9 @@ fi
 info "[5/7] 检查 Hermes OpenAI 兼容接口"
 HERMES_KEY=$(grep "^HERMES_API_KEY=" .env | cut -d'=' -f2)
 MODELS_RESP=$(curl -fsS http://localhost:8642/v1/models -H "Authorization: Bearer ${HERMES_KEY}" 2>&1 || echo "FAIL")
-if echo "$MODELS_RESP" | grep -q "deepseek"; then
-    ok "Hermes /v1/models 返回 DeepSeek 模型列表"
+# Hermes exposes itself as "hermes-agent" model ID (proxy to DeepSeek); check for valid OpenAI-compat list
+if echo "$MODELS_RESP" | grep -q '"object".*"list"' || echo "$MODELS_RESP" | grep -q '"data"'; then
+    ok "Hermes /v1/models 返回 OpenAI 兼容模型列表（hermes-agent proxy）"
 else
     fail "Hermes /v1/models 异常：$MODELS_RESP"
 fi
