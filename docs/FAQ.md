@@ -121,7 +121,7 @@ HERMES_WORKERS=1          # 限制并发 worker 数量
 # .env
 WEBUI_PORT=8080        # 原 3000
 HERMES_PORT=8643       # 原 8642
-SEARXNG_PORT=8888      # 原 8080（如启用）
+SEARXNG_PORT=8889      # 原 8080（如启用，8888 被 OrbStack tinyproxy 占用）
 ```
 
 然后重启：

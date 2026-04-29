@@ -121,5 +121,26 @@ d8039e2 — debug round 5: add 'command: gateway run' to hermes service in docke
 - 端到端调用成功，DeepSeek 返回内容含 `"content"` 字段 ✅
 
 ### Commit
+351c279 — debug round 6: fix smoke-test /v1/models check
+
+## Round 7 - SearXNG --profile full 启用 (status: PASS with fixes)
+
+### 发现
+- docker-compose.yml 中 searxng image tag `2024.12.16-0` 不存在于 Docker Hub（manifest unknown）
+- searxng 端口 8888 被 macOS OrbStack 的 tinyproxy 占用，导致 host 侧 curl 返回 tinyproxy 400
+- searxng 容器内部正常启动（监听 :8080），非容器问题
+
+### 修复
+- docker-compose.yml searxng image 改为 `searxng/searxng:2026.4.28-ed5955a5c`（当前最新可用 tag），原因：原 tag 不存在
+- docker-compose.yml searxng 主机端口 8888 → 8889，原因：8888 被 OrbStack tinyproxy 占用
+- searxng/settings.yml port 8888 → 8889（server.port 字段及注释引用）
+- docs/FAQ.md 端口示例 8888 → 8889
+
+### 验证
+- `docker compose --profile full up -d` 3 个容器全部 Up
+- `curl http://127.0.0.1:8889/` → 200，返回 SearXNG HTML
+- hermes + open-webui 均 healthy ✅
+
+### Commit
 （本轮 commit）
 

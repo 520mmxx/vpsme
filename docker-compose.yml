@@ -82,12 +82,12 @@ services:
       - opendeepseek-network
 
   searxng:
-    image: searxng/searxng:2024.12.16-0
+    image: searxng/searxng:2026.4.28-ed5955a5c
     container_name: opendeepseek-searxng
     profiles:
       - "full"
     ports:
-      - "8888:8080"
+      - "8889:8080"
     volumes:
       - ./searxng:/etc/searxng:rw
     restart: unless-stopped
