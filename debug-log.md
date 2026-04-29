@@ -44,4 +44,25 @@
 ### 下一轮关注
 - docs/ 文档完整性和内部链接
 
+## Round 3 - 文档完整性 (status: PASS with fixes)
+
+### 发现
+- docs/README.md 中链接用 `docs/INSTALL.md` 形式，但该文件本身在 docs/ 目录，应为 `INSTALL.md`
+- docs/FAQ.md 中所有内部文档链接均用 `docs/IM-BRIDGE.md` 形式，会解析为 `docs/docs/IM-BRIDGE.md`（不存在）
+- docs/FAQ.md 中 IM-BRIDGE.md 的锚链接 `#钉钉` 不匹配实际标题生成的 anchor `#1-钉钉机器人`
+- 所有 docs/ 文件本身均存在（INSTALL.md, FAQ.md, IM-BRIDGE.md, CHINA-NETWORK.md, README.md）
+- README.md（根目录）中引用 docs/INSTALL.md 等均正确（相对于项目根）
+
+### 修复
+- 修 docs/README.md 3 个链接去掉 `docs/` 前缀
+- 修 docs/FAQ.md 5 个链接去掉 `docs/` 前缀
+- 修 docs/FAQ.md IM-BRIDGE.md 锚链接为正确的 GFM anchor 格式
+
+### 验证
+- 所有引用文件均存在于对应相对路径
+
+### 下一轮关注
+- setup.sh 干跑测试，验证 .env 生成正确
+
+
 

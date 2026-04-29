@@ -44,9 +44,9 @@ open http://localhost:3000
 
 ## 文档
 
-- [安装指南](docs/INSTALL.md)
-- [常见问题](docs/FAQ.md)
-- [中国网络优化](docs/CHINA-NETWORK.md)
+- [安装指南](INSTALL.md)
+- [常见问题](FAQ.md)
+- [中国网络优化](CHINA-NETWORK.md)
 
 ## 许可证
 
