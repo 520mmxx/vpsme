@@ -82,9 +82,31 @@ def _check_service(url: str, timeout: int = 3) -> bool:
         return False
 
 
+def _log(msg: str):
+    """日志同时打印到 stderr 让用户能看到（setup.sh 跑时这里会进 onboarding-server.log）"""
+    print(f"[onboarding] {msg}", file=sys.stderr, flush=True)
+
+
 def _docker_up_and_wait():
-    """后台线程：docker compose up → 轮询健康"""
+    """后台线程：docker compose up → 轮询健康
+
+    幂等：如果 stack 已健康，直接进 ready 状态（不重启服务）。
+    如果未跑：docker compose up -d → 等 healthy → 跑 hermes-fix-model.sh。
+    """
+    # 端口正确：webui=3000, hermes=8642（之前写的 8080 是 bug）
+    webui_url = "http://localhost:3000"
+    hermes_health_url = "http://localhost:8642/health"
+
+    # 1. 先检查 stack 是否已经在跑且健康（幂等）
+    _set_state("checking", "检查容器状态…")
+    if _check_service(webui_url) and _check_service(hermes_health_url):
+        _log("Docker stack 已经在跑且健康，跳过启动")
+        _set_state("ready", "服务已运行，正在跳转…")
+        return
+
+    # 2. 启动 docker compose
     _set_state("starting", "正在启动容器…")
+    _log("docker compose up -d")
 
     try:
         result = subprocess.run(
@@ -94,6 +116,9 @@ def _docker_up_and_wait():
             text=True,
             timeout=180,
         )
+        _log(f"docker compose stdout: {result.stdout[:500]}")
+        if result.stderr:
+            _log(f"docker compose stderr: {result.stderr[:500]}")
         if result.returncode != 0:
             _set_state(
                 "error",
@@ -102,26 +127,54 @@ def _docker_up_and_wait():
             )
             return
     except FileNotFoundError:
-        _set_state("error", "找不到 docker 命令，请先安装 Docker Desktop", "")
+        _set_state(
+            "error",
+            "找不到 docker 命令",
+            "请先安装 Docker Desktop：https://www.docker.com/products/docker-desktop",
+        )
         return
     except subprocess.TimeoutExpired:
-        _set_state("error", "docker compose 超时（>180s）", "")
+        _set_state("error", "docker compose 超时（>180s）", "网络太慢或镜像拉取卡住")
+        return
+    except Exception as exc:
+        _set_state("error", f"启动失败: {type(exc).__name__}", str(exc)[:1000])
         return
 
-    _set_state("checking", "容器已启动，等待服务就绪…")
-
-    # 轮询最多 5 分钟
+    # 3. 等服务 healthy
+    _set_state("checking", "容器已启动，等待服务就绪（首次启动需 1-2 分钟）…")
     deadline = time.time() + 300
-    webui_url = "http://localhost:3000"
-    hermes_url = "http://localhost:8080"
 
     while time.time() < deadline:
         webui_ok = _check_service(webui_url)
-        hermes_ok = _check_service(hermes_url)
+        hermes_ok = _check_service(hermes_health_url)
+        _log(f"health: webui={webui_ok}, hermes={hermes_ok}")
         if webui_ok and hermes_ok:
+            # 4. 跑 hermes-fix-model.sh 修正默认 model
+            _set_state("checking", "应用 Hermes 模型修复（首次启动需要）…")
+            fix_script = PROJECT_ROOT / "scripts" / "hermes-fix-model.sh"
+            if fix_script.exists():
+                try:
+                    fix_result = subprocess.run(
+                        ["bash", str(fix_script)],
+                        cwd=str(PROJECT_ROOT),
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    _log(f"hermes-fix-model: {fix_result.stdout[:300]}")
+                except Exception as exc:
+                    _log(f"hermes-fix-model 失败（继续）: {exc}")
             _set_state("ready", "全部服务已就绪！")
+            _log("✅ ready, frontend should redirect now")
             return
         time.sleep(3)
+
+    _set_state(
+        "error",
+        "服务启动超时（5 分钟内未就绪）",
+        f"webui_ok={_check_service(webui_url)}, hermes_ok={_check_service(hermes_health_url)}\n"
+        "请运行 'docker compose logs' 查看具体错误",
+    )
 
     _set_state(
         "error",
