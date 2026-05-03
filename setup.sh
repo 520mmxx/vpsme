@@ -1,10 +1,44 @@
 #!/bin/bash
 set -e
 
-# 解析参数：--advanced 进入完整询问模式；默认极简
+# 解析参数：
+#   --web       浏览器图形界面引导（推荐小白，糖果色 onboarding wizard）
+#   --advanced  命令行完整询问（5 项配置）
+#   默认        命令行极简（只问 API Key）
 SETUP_MODE="simple"
 if [[ "${1:-}" == "--advanced" || "${1:-}" == "-a" ]]; then
     SETUP_MODE="advanced"
+elif [[ "${1:-}" == "--web" || "${1:-}" == "-w" ]]; then
+    SETUP_MODE="web"
+fi
+
+# Web 模式：启动浏览器 onboarding wizard
+if [[ "$SETUP_MODE" == "web" ]]; then
+    if ! command -v python3 &>/dev/null; then
+        echo "❌ Web 模式需要 python3（macOS/Linux 自带）"
+        echo "请改用命令行模式: ./setup.sh"
+        exit 1
+    fi
+    if [[ ! -f "onboarding/server.py" ]]; then
+        echo "❌ onboarding/server.py 不存在，请确保完整克隆了项目"
+        exit 1
+    fi
+
+    echo ""
+    echo "🌸 启动 OpenDeepSeek Web 安装向导..."
+    echo "   浏览器会自动打开 http://localhost:3001"
+    echo "   按 Ctrl+C 取消"
+    echo ""
+
+    # 自动开浏览器
+    if command -v open &>/dev/null; then
+        ( sleep 2 && open http://localhost:3001 ) &
+    elif command -v xdg-open &>/dev/null; then
+        ( sleep 2 && xdg-open http://localhost:3001 2>/dev/null ) &
+    fi
+
+    # 启动 onboarding server（阻塞）— 它会处理 API key 输入 + 启动 docker compose
+    exec python3 onboarding/server.py
 fi
 
 # ============================================================

@@ -104,7 +104,9 @@ services:
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
     volumes:
       - open-webui-data:/app/backend/data
-      - ./webui/custom.css:/app/build/static/custom.css:ro   # OpenDeepSeek 主题 CSS
+      - ./webui/custom.css:/app/build/static/custom.css:ro       # OpenDeepSeek 主题 CSS
+      - ./webui/pwa-prompt.js:/app/build/static/pwa-prompt.js:ro    # PWA 引导脚本（在 Admin Panel Custom JS 中粘贴启用）
+      - ./webui/pwa-prompt.css:/app/build/static/pwa-prompt.css:ro  # PWA 引导样式（由 pwa-prompt.js 自动注入）
     depends_on:
       hermes:
         condition: service_healthy
