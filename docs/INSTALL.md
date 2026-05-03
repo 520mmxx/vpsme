@@ -1,8 +1,8 @@
 # OpenDeepSeek 安装指南
 
-> 一键部署本地 Agentic ChatGPT 替代品  
-> 架构（v0.3.0 默认）：Open WebUI ⟶ DeepSeek V4 Flash 直连  
-> 可选高级层（`--profile advanced`）：Hermes Agent 用于 IM 桥接（钉钉/飞书等）
+> 一键部署本地 Agentic ChatGPT 替代品
+> 架构（v0.4.2 默认）：Open WebUI ⟶ Hermes Smart Bridge ⟶ DeepSeek V4 Flash（普通问答）/ Hermes Agent（真任务）
+> Smart Bridge 负责图片落盘 OCR + 智能路由，Hermes 负责 Memory / Skills / Cron / Subagent / IM 桥接
 
 ---
 
@@ -30,12 +30,12 @@ docker info               # 确认 Docker daemon 正在运行
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/will-ai-lab/opendeepseek.git
+git clone https://github.com/mouxue56-debug/opendeepseek.git
 cd opendeepseek
 
 # 2. 运行安装脚本
 chmod +x setup.sh
-./setup.sh
+./setup.sh --web
 ```
 
 `setup.sh` 会自动完成以下操作：
@@ -43,16 +43,18 @@ chmod +x setup.sh
 1. 检查 Docker 和 Docker Compose 是否已安装
 2. 复制 `.env.example` 为 `.env`（如不存在）
 3. 拉取最新 Docker 镜像
-4. 启动 Open WebUI 容器（直连 DeepSeek API）
-5. 等待健康检查通过
-6. 打印访问地址和下一步指引
+4. 启动 Hermes Agent + Hermes Smart Bridge + Open WebUI
+5. 修复 Hermes 默认模型为 DeepSeek V4 Flash / Pro
+6. 等待健康检查通过并打印访问地址
+
+macOS 用户也可以双击项目根目录的 `OpenDeepSeek.command`，效果等同于执行 `./setup.sh --web`。
 
 安装完成后，终端会显示：
 
 ```
 ✅ OpenDeepSeek 启动成功！
 🌐 访问地址：http://localhost:3000
-🔑 首次访问请注册管理员账号
+🔑 家庭模式默认无需注册，打开即可对话
 ```
 
 ---
@@ -64,7 +66,7 @@ chmod +x setup.sh
 ### 3.1 克隆仓库
 
 ```bash
-git clone https://github.com/will-ai-lab/opendeepseek.git
+git clone https://github.com/mouxue56-debug/opendeepseek.git
 cd opendeepseek
 ```
 
@@ -119,9 +121,10 @@ docker compose logs -f     # 实时查看日志（Ctrl+C 退出）
 http://localhost:3000
 ```
 
-### 4.2 注册管理员账号
+### 4.2 登录模式
 
-首次访问时，系统会要求注册。第一个注册的账号自动成为**管理员**，拥有全部权限。
+默认家庭模式（`WEBUI_AUTH=false`）不需要注册，打开即可对话。
+如果你在 `.env` 中设置了 `WEBUI_AUTH=true`，首次访问时需要注册第一个管理员账号。
 
 ```
 用户名：admin（或任意）
@@ -133,8 +136,8 @@ http://localhost:3000
 
 1. 登录后点击右上角头像 → **Admin Panel**
 2. 左侧菜单选择 **Settings → Connections**
-3. 在 **OpenAI API** 或 **Direct Connections** 区域，确认已显示 `https://api.deepseek.com/v1` 连接 + 模型列表（`deepseek-v4-flash` / `deepseek-v4-pro`）
-4. 模型列表中应包含 `deepseek-v4-flash` 及相关变体
+3. 在 **OpenAI API** 或 **Direct Connections** 区域，确认连接指向 `http://hermes-bridge:8765/v1`
+4. 模型列表中应包含 `hermes-agent`，这是 Open WebUI 调用 Hermes Agent 的入口
 
 如果 Hermes 未显示，请检查：
 
@@ -206,8 +209,8 @@ docker compose down -v --rmi all
 services:
   open-webui:
     ports:
-      - "3001:8080"   # 将主机端口从 3000 改为 3001
-  
+      - "127.0.0.1:3002:8080"   # 将主机端口从 3000 改为 3002，避开 onboarding 的 3001
+
   hermes:
     ports:
       - "8643:8642"   # 将主机端口从 8642 改为 8643

@@ -166,7 +166,7 @@ qwen3.6 给出建议后，**由你决定哪些 apply**。实施方式：
 让 qwen3.6 做增量 review 时，以下问题已经被记录，可以作为上下文告诉它"这些已知，看看还有什么新的"：
 
 - [ ] Hermes 对外暴露的 model id 是 `hermes-agent`，不够友好（建议改为 `OpenDeepSeek (DeepSeek V4 Flash)`）
-- [ ] `install.sh` 和 `README.md` 里的 `yourusername` placeholder 没有替换为真实 GitHub 路径
+- [x] `install.sh` 和 `README.md` 里的 GitHub 路径已统一为 `mouxue56-debug/opendeepseek`
 - [ ] `CONTRIBUTING.md` 只有中文，缺英文版（国际贡献者不友好）
 - [ ] 没有 systemd（Linux）/ launchd（macOS）自启脚本，重启电脑后服务需要手动恢复
 - [ ] `scripts/smoke-test.sh` 第 7 项需要登录 token，自动化 CI 路径不完整

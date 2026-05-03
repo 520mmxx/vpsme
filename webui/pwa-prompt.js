@@ -1,11 +1,10 @@
 /**
- * OpenDeepSeek PWA 强引导脚本
+ * OpenDeepSeek PWA 安装引导脚本
  * 版本：v1.0.0
  * 功能：检测设备类型，引导用户"添加到主屏幕"，让 OpenDeepSeek 像真 App 一样使用
  *
  * 使用方式：
- *   在 Open WebUI Admin Panel → Settings → Interface → Custom JS 中粘贴此文件全部内容
- *   或挂载到容器后在 custom.css 末尾通过 <script> 标签引入
+ *   由 /static/loader.js 自动加载，无需在后台粘贴 Custom JS
  *
  * 支持平台：
  *   - iOS Safari（教用户手动添加）
@@ -233,7 +232,7 @@
       '  <div class="ods-pwa-body">',
       '    <div class="ods-pwa-title">想要桌面 App？</div>',
       '    <div class="ods-pwa-desc">Chrome/Edge：地址栏右侧点 <span class="ods-pwa-highlight">⊕ 安装</span> 图标，即可固定到桌面。',
-      '    也可查看 <a class="ods-pwa-link" href="/docs/ONE-CLICK.md" target="_blank">安装指引</a>。</div>',
+      '    也可查看 <a class="ods-pwa-link" href="https://github.com/mouxue56-debug/opendeepseek/blob/main/docs/ONE-CLICK.md" target="_blank" rel="noopener noreferrer">安装指引</a>。</div>',
       '  </div>',
       '  <button class="ods-pwa-close" aria-label="关闭">✕</button>',
       '</div>',

@@ -82,7 +82,7 @@ openclaw chat --model qwen
 openclaw agent --local --model kimi --message "..." --json
 ```
 
-**这种模式在 Claude Code 当前权限规则下被拦**（"creating an autonomous agent loop"）。除非用户在 `.claude/settings.json` 加 Bash allow rule，否则不要尝试。
+**这种模式容易被本地 agent 权限策略拦截**（"creating an autonomous agent loop"）。公开项目默认不要依赖它，优先使用 oneshot 调用。
 
 ### 模式 D：Sonnet 实施（Anthropic Agent tool）
 
@@ -322,7 +322,6 @@ Agent({
 ## 9. 进一步阅读
 
 - `docs/QWEN-REVIEW.md` - 用 OpenClaw + Qwen3.6 做合规 review 的具体步骤
-- `.planning/qwen-reviews/` - 实战样例（Wave 6 的 5 份 review）
 - OpenClaw 官方文档：`openclaw docs`
 
 ---

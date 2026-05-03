@@ -15,21 +15,21 @@
 
 ## 模型相关
 
-### Q: deepseek-chat 在 2026-07-24 退役，对我有什么影响？怎么迁移？
+### Q: deepseek-chat / deepseek-reasoner 在 2026-07-24 弃用，对我有什么影响？
 
-**影响**：2026-07-24 起，`deepseek-chat`（V3）和 `deepseek-reasoner`（R1）将停止服务，调用会返回 `410 Gone` 或降级到 V4-flash。
+**影响**：`deepseek-chat` 和 `deepseek-reasoner` 是兼容别名，将于 2026-07-24 弃用。出于兼容，二者目前分别对应 `deepseek-v4-flash` 的非思考 / 思考模式。OpenDeepSeek 默认使用官方新模型名 `deepseek-v4-flash`，避免用户后续迁移。
 
 **迁移步骤**：
 
 1. 修改 `.env` 中的模型别名：
    ```bash
-   # 旧配置（即将失效）
+   # 旧兼容别名（不推荐）
    DEFAULT_MODEL=deepseek-chat
 
    # 新配置（推荐）
    DEFAULT_MODEL=deepseek-v4-flash
-   # 或需要深度推理时
-   # DEFAULT_MODEL=deepseek-v4-pro
+   # 若旧 Hermes provider 暂时不识别新名，可临时用 deepseek-reasoner 兜底
+   # DEFAULT_MODEL=deepseek-reasoner
    ```
 2. 重启容器：
    ```bash
@@ -37,7 +37,7 @@
    ```
 3. 若之前保存了 `deepseek-chat` 的预设提示词，建议在新模型下重新测试效果（V4 的指令遵循能力更强，部分旧提示词可能需要精简）。
 
-> 退役公告详见：[DeepSeek 官方通知](https://platform.deepseek.com)（登录后查看「模型生命周期」页面）。
+> 原则：项目默认和文档都写新模型名；兼容别名只作为旧 provider 兜底，不作为新用户默认配置。
 
 ---
 
@@ -92,10 +92,10 @@
 | 组件 | 最低配置 | 推荐配置 | 说明 |
 |------|---------|---------|------|
 | **Open WebUI** | 2 核 2G | 2 核 4G | 前端 + 后端，无 GPU 需求 |
-| **Hermes Agent** | 1 核 1G | 2 核 2G | 可选（advanced profile）— IM 集成 / Cron 任务，默认不启动 |
+| **Hermes Agent** | 1 核 1G | 2 核 2G | 默认启动，提供 Memory / Skills / Cron / Subagent / IM 桥接 |
 | **SearXNG**（可选） | 1 核 1G | 1 核 2G | 自托管搜索，无外部依赖 |
-| **总计（默认）** | **3 核 3G** | **3 核 6G** | 不含 Hermes；省 1 核 1G |
-| **总计（advanced）** | **4 核 4G** | **4 核 8G** | 含 Hermes，含系统开销余量 |
+| **总计（默认）** | **3 核 3G** | **4 核 6G** | Hermes + Open WebUI |
+| **总计（full）** | **4 核 4G** | **4 核 8G** | 额外含 SearXNG |
 
 **4 核 4G 实测表现**：
 
@@ -106,23 +106,30 @@
 **优化建议（低配机器）**：
 
 ```bash
-# .env 中关闭可选组件
-ENABLE_SEARXNG=false      # 如需联网搜索，改用外部 SearXNG 实例
-ENABLE_PADDLEOCR=false    # 关闭 OCR，纯文本知识库仍可运行
-HERMES_WORKERS=1          # 限制并发 worker 数量
+# 只启动核心服务，不启用本地搜索后端
+docker compose up -d
+
+# 需要自托管联网搜索时再启用 full profile
+docker compose --profile full up -d
 ```
 
 ---
 
 ### Q: 怎么改默认端口（3000 / 8642 已占用）？
 
-修改 `docker-compose.yml` 中的端口映射，或创建 `.env` 覆盖：
+修改 `docker-compose.yml` 中的端口映射：
 
-```bash
-# .env
-WEBUI_PORT=8080        # 原 3000
-HERMES_PORT=8643       # 原 8642
-SEARXNG_PORT=8889      # 原 8080（如启用，8888 被 OrbStack tinyproxy 占用）
+```yaml
+services:
+  open-webui:
+    ports:
+      - "127.0.0.1:3002:8080"   # 原 3000，避开 onboarding 的 3001
+  hermes:
+    ports:
+      - "127.0.0.1:8643:8642"   # 原 8642
+  searxng:
+    ports:
+      - "127.0.0.1:8890:8080"   # 如启用 full profile
 ```
 
 然后重启：
@@ -134,8 +141,8 @@ docker compose down && docker compose up -d
 **验证**：
 
 ```bash
-curl http://localhost:8080/health   # 应返回 {"status":"ok"}
-curl http://localhost:8643/health  # 应返回 {"status":"ok"}
+curl http://localhost:3002          # Open WebUI 应返回 HTML
+curl http://localhost:8643/health   # Hermes 应返回健康状态
 ```
 
 > 若使用反向代理（Nginx/Caddy），记得同步更新 upstream 端口。
@@ -257,16 +264,11 @@ PADDLEOCR_DPI=300           # 扫描件建议 300dpi 以上
 
 **开启步骤**：
 
-1. `.env` 中启用：
-   ```bash
-   ENABLE_SEARXNG=true
-   SEARXNG_PORT=8080
-   ```
-2. 重启：
-   ```bash
-   docker compose up -d searxng
-   ```
-3. 对话中输入 `@web 今天的新闻` 或点击工具栏「联网搜索」图标。
+```bash
+docker compose --profile full up -d
+```
+
+启动后 SearXNG 在 Docker 内网中供 Open WebUI 使用；如需调试搜索页面，访问 `http://localhost:8889`。
 
 **工作原理**：
 
@@ -421,49 +423,49 @@ LOG_LEVEL=warning
 
 ### Q: Hermes Agent 是什么？为什么不直接用 Open WebUI 接 DeepSeek？
 
-**v0.3.0 起，默认部署不启动 Hermes。** Open WebUI 直连 DeepSeek API，绝大多数用户不需要 Hermes。
-
-Hermes 是一个**可选的高级层**，仅在以下场景才需要：
-
-- 在**钉钉 / 飞书 / 企微等 IM** 里直接 @bot 与 AI 对话
-- 需要 AI **后台跑定时任务**并把结果推送到 IM 群
-
-> **为什么默认不开？** Hermes 不原生支持 DeepSeek 作为 LLM provider，强加一层只会引入 401 鉴权 bug。默认架构去掉这层，更简单、更稳定。
-
-**数据流对比**：
+Hermes 是 OpenDeepSeek 的 Agent 内核。v0.4.2 起默认路径是：
 
 ```
-普通对话流（默认，开箱即用）：
-用户 → Open WebUI → DeepSeek API → 回复
-
-IM/Cron 流（advanced profile，按需启用）：
-钉钉用户 @bot → Hermes → OpenRouter API → 回复发回钉钉群
-（Hermes 同时跑 Cron 任务）
+普通问答：用户 → Open WebUI → Smart Bridge → DeepSeek V4
+真任务：  用户 → Open WebUI → Smart Bridge → Hermes Agent → DeepSeek V4
 ```
 
-**启用 Hermes（advanced profile）**：
+Open WebUI 负责网页/PWA/桌面体验、聊天历史、知识库和上传；Smart Bridge 负责图片落盘 OCR 与智能路由，普通问答直连 DeepSeek，真任务进入 Hermes；Hermes 负责 Memory、Skills、Cron、Subagent 和 IM 桥接；DeepSeek V4 负责推理。直接让 Open WebUI 接 DeepSeek 只能得到普通聊天，无法保证“提醒我喝水”这类请求真的进入 Hermes Cron skill。
+
+**关键数据流**：
+
+```
+普通网页对话：
+用户 → Open WebUI → Smart Bridge → DeepSeek（普通问答）
+用户 → Open WebUI → Smart Bridge → Hermes → DeepSeek → Hermes 工具/记忆 → Open WebUI（真任务）
+
+IM/Cron：
+钉钉/飞书用户 @bot → Hermes → DeepSeek → Cron/Memory/Skill → 推送回 IM
+```
+
+**默认启动**：
 
 ```bash
-docker compose --profile advanced up -d
+docker compose up -d
 ```
 
-> ⚠️ 启用 Hermes 需要额外的 API key（OpenRouter / Anthropic / Kimi 等），**不能**直接复用 DeepSeek key。请在 `.env` 中配置 `HERMES_LLM_PROVIDER` 及对应 key。
+Hermes 使用原生 `deepseek` provider，复用 `.env` 里的 `DEEPSEEK_API_KEY`。
 
 ---
 
-### Q: 默认架构和 advanced profile 的区别？
+### Q: 默认架构和 full profile 的区别？
 
-| 对比项 | 默认部署 | advanced profile |
+| 对比项 | 默认部署 | full profile |
 |--------|---------|-----------------|
-| **启动命令** | `docker compose up -d` | `docker compose --profile advanced up -d` |
-| **容器数** | 2（Open WebUI + SearXNG） | 3（+ Hermes） |
+| **启动命令** | `docker compose up -d` | `docker compose --profile full up -d` |
+| **容器数** | 3（Hermes + Smart Bridge + Open WebUI） | 4（+ SearXNG） |
 | **内存占用** | ~3G（最低） | ~4G（最低） |
-| **LLM provider** | DeepSeek API（直连） | DeepSeek（WebUI）+ OpenRouter/Anthropic/Kimi 等（Hermes） |
+| **LLM provider** | Hermes 原生 deepseek provider | 同默认 |
 | **普通网页对话** | ✅ | ✅ |
-| **IM 机器人（钉钉/飞书）** | ❌ | ✅ |
-| **定时任务 / Cron 推送** | ❌ | ✅ |
-| **额外 API key 需求** | 无 | 需配置 Hermes LLM provider key |
-| **何时选用** | 绝大多数个人 / 团队用户 | 需要 IM 集成或后台自动化的用户 |
+| **IM 机器人（钉钉/飞书）** | ✅（填入对应凭证后启用） | ✅ |
+| **定时任务 / Cron 推送** | ✅ | ✅ |
+| **联网搜索后端** | 不启动本地 SearXNG | 启动 SearXNG |
+| **何时选用** | 绝大多数个人 / 团队用户 | 需要自托管联网搜索 |
 
 ---
 
@@ -489,7 +491,7 @@ git check-ignore .env   # 应输出 .env
 docker logs opendeepseek-hermes 2>&1 | grep -i "sk-" || echo "未发现明文 key"
 
 # 3. 确认前端无法获取
-curl http://localhost:8080/api/config | grep -i "api_key" || echo "前端不暴露 key"
+curl http://localhost:3000/api/config | grep -i "api_key" || echo "前端不暴露 key"
 ```
 
 **风险场景（用户责任）**：

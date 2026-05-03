@@ -9,7 +9,7 @@
 1. [iOS Safari — 添加到主屏幕](#ios-safari)
 2. [Android Chrome — 安装为 App](#android-chrome)
 3. [桌面 PWA — Chrome / Edge](#desktop-pwa)
-4. [启用强引导脚本 pwa-prompt.js](#启用引导脚本)
+4. [启用安装引导脚本](#启用安装引导脚本)
 5. [自定义 App 图标](#自定义图标)
 
 ---
@@ -76,38 +76,27 @@
 
 ---
 
-## 启用引导脚本
+## 启用安装引导脚本
 
-`pwa-prompt.js` 实现了"底部滑入横幅"强引导，需要在 Open WebUI 中手动启用。
+`loader.js` 会自动加载 `pwa-prompt.js`，无需再进入 Open WebUI 后台粘贴 Custom JS。
 
-### 方法 1：Admin Panel 粘贴（推荐）
-
-1. 访问 `http://localhost:3000`，以管理员账号登录
-2. 进入 **Admin Panel** → **Settings** → **Interface**
-3. 找到 **Custom JavaScript** 或 **Custom JS** 字段
-4. 打开 `webui/pwa-prompt.js` 文件，复制全部内容
-5. 粘贴到 Custom JS 字段，保存
-6. 刷新页面，2.5 秒后会出现引导横幅
-
-> Custom JS 字段的位置：Settings → Interface → 下方的 "Custom JavaScript" 文本框
-
-### 方法 2：docker compose 挂载（已配置）
+### docker compose 挂载（已配置）
 
 `docker-compose.yml` 已将以下文件挂载到容器：
 
 ```
+./webui/loader.js       → /app/build/static/loader.js
 ./webui/pwa-prompt.js   → /app/build/static/pwa-prompt.js
 ./webui/pwa-prompt.css  → /app/build/static/pwa-prompt.css
 ```
 
-文件已可通过 `http://localhost:3000/static/pwa-prompt.js` 访问。
-但 Open WebUI 不会自动执行这些文件，仍需通过 Custom JS 字段粘贴 JS 内容来触发。
+刷新 `http://localhost:3000` 后，Open WebUI 会执行 `loader.js`，再自动载入 PWA 引导脚本。
 
 ### 验证引导效果
 
 | 操作 | 预期结果 |
 |------|---------|
-| 用手机 Safari 打开（首次） | 2.5 秒后出现粉色底部横幅，显示三步引导 |
+| 用手机 Safari 打开（首次） | 2.5 秒后出现底部横幅，显示三步引导 |
 | 用 Android Chrome 打开（首次） | 出现横幅，点"安装"触发原生 install prompt |
 | 点横幅 ✕ 关闭 | 7 天内不再显示 |
 | 成功添加到主屏幕后再打开 | 永久不再显示横幅 |

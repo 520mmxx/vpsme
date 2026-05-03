@@ -1,145 +1,102 @@
 /**
- * OpenDeepSeek PWA 引导 Banner — 样式
- * 糖果色主题：粉 #FF7B9C / 薰衣草 #B48EE0
- * 圆角 16px，柔和阴影，底部滑入动画
+ * OpenDeepSeek PWA prompt — neutral Open WebUI style.
  */
 
-/* ──────────────────────────────────────────
-   变量
-────────────────────────────────────────── */
 :root {
-  --ods-pwa-pink:       #FF7B9C;
-  --ods-pwa-pink-light: #FFAEC5;
-  --ods-pwa-pink-dark:  #E85480;
-  --ods-pwa-lav:        #B48EE0;
-  --ods-pwa-lav-light:  #D0B8F0;
-  --ods-pwa-lav-dark:   #8B5DB8;
-  --ods-pwa-bg:         rgba(255, 248, 240, 0.97);
-  --ods-pwa-bg-dark:    rgba(22, 18, 32, 0.97);
-  --ods-pwa-text:       #2D1B4E;
-  --ods-pwa-text-sec:   #6B5B7B;
-  --ods-pwa-radius:     16px;
-  --ods-pwa-shadow:
-    0 -4px 32px rgba(180, 142, 224, 0.25),
-    0 -1px 8px  rgba(255, 123, 156, 0.15),
-    0 4px  24px rgba(0, 0, 0, 0.12);
+  --ods-pwa-bg: rgba(255, 255, 255, 0.98);
+  --ods-pwa-border: #e5e5e5;
+  --ods-pwa-text: #171717;
+  --ods-pwa-muted: #5f6368;
+  --ods-pwa-accent: #10a37f;
+  --ods-pwa-accent-hover: #0d8f70;
+  --ods-pwa-radius: 12px;
+  --ods-pwa-shadow: 0 -8px 28px rgba(0, 0, 0, 0.10);
 }
 
-/* ──────────────────────────────────────────
-   Banner 容器（底部固定）
-────────────────────────────────────────── */
+.dark {
+  --ods-pwa-bg: rgba(33, 33, 33, 0.98);
+  --ods-pwa-border: #3a3a3a;
+  --ods-pwa-text: #f4f4f4;
+  --ods-pwa-muted: #c7c7c7;
+}
+
 .ods-pwa-banner {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
   z-index: 99999;
-  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)) 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  color: var(--ods-pwa-text);
   background: var(--ods-pwa-bg);
-  border-top: 2px solid transparent;
-  border-image: linear-gradient(90deg, var(--ods-pwa-pink), var(--ods-pwa-lav)) 1;
-  border-radius: var(--ods-pwa-radius) var(--ods-pwa-radius) 0 0;
+  border: 1px solid var(--ods-pwa-border);
+  border-radius: var(--ods-pwa-radius);
   box-shadow: var(--ods-pwa-shadow);
-
-  /* 入场动画初始状态 */
-  transform: translateY(100%);
-  opacity: 0;
-  transition:
-    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 0.35s ease;
-
-  /* 防止内容溢出 */
   box-sizing: border-box;
-  max-width: 100vw;
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  transition: transform 0.28s ease, opacity 0.24s ease;
 }
 
-/* 深色模式 */
-.dark .ods-pwa-banner,
-@media (prefers-color-scheme: dark) {
-  .ods-pwa-banner {
-    background: var(--ods-pwa-bg-dark);
-    --ods-pwa-text: #F0E6FF;
-    --ods-pwa-text-sec: #B8A8CC;
-  }
-}
-
-.dark .ods-pwa-banner {
-  background: var(--ods-pwa-bg-dark);
-}
-
-/* 显示态（JS 添加此 class） */
 .ods-pwa-banner--visible {
   transform: translateY(0);
   opacity: 1;
 }
 
-/* 离场动画 */
 .ods-pwa-banner--hiding {
-  transform: translateY(100%);
+  transform: translateY(calc(100% + 24px));
   opacity: 0;
 }
 
-/* ──────────────────────────────────────────
-   内部布局
-────────────────────────────────────────── */
 .ods-pwa-inner {
   display: flex;
   align-items: center;
   gap: 12px;
-  max-width: 680px;
-  margin: 0 auto;
 }
 
-/* 机器人图标 */
 .ods-pwa-icon {
-  font-size: 2rem;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
+  background: #f1f1f2;
+  font-size: 1.25rem;
   line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(180, 142, 224, 0.4));
 }
 
-/* 文字区 */
+.dark .ods-pwa-icon {
+  background: #303030;
+}
+
 .ods-pwa-body {
   flex: 1;
   min-width: 0;
 }
 
 .ods-pwa-title {
-  font-size: 0.95rem;
-  font-weight: 700;
+  margin: 0 0 3px;
   color: var(--ods-pwa-text);
-  margin-bottom: 4px;
-  line-height: 1.3;
-  background: linear-gradient(90deg, var(--ods-pwa-pink-dark), var(--ods-pwa-lav-dark));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 0.94rem;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
-.dark .ods-pwa-title {
-  background: linear-gradient(90deg, var(--ods-pwa-pink-light), var(--ods-pwa-lav-light));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.ods-pwa-desc {
+.ods-pwa-desc,
+.ods-pwa-step {
+  color: var(--ods-pwa-muted);
   font-size: 0.82rem;
-  color: var(--ods-pwa-text-sec);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
-.dark .ods-pwa-desc {
-  color: #B8A8CC;
-}
-
-/* ──────────────────────────────────────────
-   iOS 步骤条
-────────────────────────────────────────── */
 .ods-pwa-steps {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   margin-top: 4px;
 }
@@ -147,58 +104,31 @@
 .ods-pwa-step {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.8rem;
-  color: var(--ods-pwa-text-sec);
+  gap: 5px;
 }
 
-.dark .ods-pwa-step {
-  color: #C0AFC8;
-}
-
-.ods-pwa-step-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--ods-pwa-pink), var(--ods-pwa-lav));
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-
-.ods-pwa-arrow {
-  font-size: 0.75rem;
-  color: var(--ods-pwa-lav);
-  opacity: 0.7;
-}
-
-.ods-pwa-highlight {
-  font-weight: 600;
-  color: var(--ods-pwa-pink-dark);
-}
-
-.dark .ods-pwa-highlight {
-  color: var(--ods-pwa-pink-light);
-}
-
-/* 分享按钮图标（SVG 内联） */
+.ods-pwa-step-icon,
 .ods-pwa-emoji-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--ods-pwa-accent);
+}
+
+.ods-pwa-step-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.ods-pwa-emoji-btn {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--ods-pwa-pink), var(--ods-pwa-lav));
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  vertical-align: middle;
-  box-shadow: 0 2px 6px rgba(255, 123, 156, 0.35);
+  border-radius: 7px;
 }
 
 .ods-pwa-emoji-btn svg {
@@ -207,172 +137,85 @@
   stroke: #fff;
 }
 
-/* ──────────────────────────────────────────
-   安装按钮（Android / Desktop）
-────────────────────────────────────────── */
-.ods-pwa-install-btn {
-  flex-shrink: 0;
-  padding: 9px 18px;
-  border: none;
-  border-radius: 24px;
-  background: linear-gradient(135deg, var(--ods-pwa-pink), var(--ods-pwa-lav));
-  color: #fff;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow:
-    0 3px 12px rgba(255, 123, 156, 0.45),
-    0 1px 4px rgba(0, 0, 0, 0.15);
-  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
-  /* 覆盖 Open WebUI custom.css 全局 button 样式 */
-  min-height: unset !important;
-  min-width: unset !important;
-  background-color: unset !important;
-}
-
-.ods-pwa-install-btn:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 6px 20px rgba(255, 123, 156, 0.55),
-    0 2px 6px rgba(0, 0, 0, 0.2);
-  filter: brightness(1.05);
-}
-
-.ods-pwa-install-btn:active {
-  transform: translateY(0);
-  filter: brightness(0.95);
-}
-
-/* ──────────────────────────────────────────
-   关闭按钮
-────────────────────────────────────────── */
-.ods-pwa-close {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(180, 142, 224, 0.15);
-  color: var(--ods-pwa-lav-dark);
+.ods-pwa-arrow {
+  color: var(--ods-pwa-muted);
   font-size: 0.8rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
-  /* 覆盖全局 button 样式 */
-  min-height: unset !important;
-  min-width: unset !important;
-  padding: 0 !important;
-  background-color: rgba(180, 142, 224, 0.15) !important;
-  color: var(--ods-pwa-lav-dark) !important;
 }
 
-.dark .ods-pwa-close {
-  background: rgba(180, 142, 224, 0.2) !important;
-  color: var(--ods-pwa-lav-light) !important;
-}
-
-.ods-pwa-close:hover {
-  background: rgba(180, 142, 224, 0.3) !important;
-  transform: rotate(90deg);
-}
-
-/* ──────────────────────────────────────────
-   iOS 底部箭头装饰（指向底栏分享按钮）
-────────────────────────────────────────── */
-.ods-pwa-banner--ios .ods-pwa-arrow-down {
-  position: absolute;
-  bottom: calc(0px - env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 10px solid var(--ods-pwa-pink);
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* ──────────────────────────────────────────
-   链接样式
-────────────────────────────────────────── */
+.ods-pwa-highlight,
 .ods-pwa-link {
-  color: var(--ods-pwa-pink-dark);
-  text-decoration: underline;
-  text-decoration-color: rgba(232, 84, 128, 0.4);
-  transition: color 0.15s;
+  color: var(--ods-pwa-accent);
+  font-weight: 600;
+}
+
+.ods-pwa-link {
+  text-decoration: none;
 }
 
 .ods-pwa-link:hover {
-  color: var(--ods-pwa-lav-dark);
-  text-decoration-color: rgba(139, 93, 184, 0.6);
+  text-decoration: underline;
 }
 
-.dark .ods-pwa-link {
-  color: var(--ods-pwa-pink-light);
+.ods-pwa-install-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ods-pwa-accent);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
 }
 
-/* ──────────────────────────────────────────
-   平台变体微调
-────────────────────────────────────────── */
-/* iOS：步骤信息量多，给更多纵向空间 */
-.ods-pwa-banner--ios .ods-pwa-body {
-  padding-right: 4px;
+.ods-pwa-install-btn:hover {
+  background: var(--ods-pwa-accent-hover);
 }
 
-/* Desktop：不需要底部箭头 */
-.ods-pwa-banner--desktop .ods-pwa-arrow-down {
+.ods-pwa-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ods-pwa-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.ods-pwa-close:hover {
+  background: rgba(127, 127, 127, 0.12);
+  color: var(--ods-pwa-text);
+}
+
+.ods-pwa-arrow-down {
   display: none;
 }
 
-/* ──────────────────────────────────────────
-   窄屏适配（< 420px）
-────────────────────────────────────────── */
-@media (max-width: 420px) {
+@media (max-width: 640px) {
+  .ods-pwa-banner {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
   .ods-pwa-inner {
-    gap: 8px;
+    gap: 10px;
   }
 
   .ods-pwa-icon {
-    font-size: 1.6rem;
-  }
-
-  .ods-pwa-title {
-    font-size: 0.88rem;
-  }
-
-  .ods-pwa-steps {
-    gap: 4px;
-  }
-
-  .ods-pwa-step {
-    font-size: 0.75rem;
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    font-size: 1.1rem;
   }
 
   .ods-pwa-install-btn {
-    padding: 8px 14px;
-    font-size: 0.82rem;
-  }
-}
-
-/* 极窄屏（iPhone SE 320px）：单列布局 */
-@media (max-width: 340px) {
-  .ods-pwa-inner {
-    flex-wrap: wrap;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .ods-pwa-steps {
-    justify-content: center;
-  }
-
-  .ods-pwa-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    padding: 7px 12px;
   }
 }

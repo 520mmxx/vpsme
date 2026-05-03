@@ -2,12 +2,11 @@
 """
 OpenDeepSeek Onboarding Server
 零依赖 HTTP server（仅用 Python 标准库）
-监听 0.0.0.0:3001，引导用户填写 DeepSeek API Key
+监听 127.0.0.1:3001，引导用户填写 DeepSeek API Key
 """
 
 import http.server
 import json
-import os
 import pathlib
 import secrets
 import subprocess
@@ -27,6 +26,7 @@ INDEX_HTML = SCRIPT_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 
 PORT = 3001
+HOST = "127.0.0.1"
 
 # 全局启动状态（写入配置后由后台线程更新）
 _startup_state = {
@@ -51,12 +51,14 @@ def _set_state(phase: str, message: str = "", error: str = ""):
 def _write_env(deepseek_api_key: str, model: str):
     """写入 .env 文件（覆盖已有内容中的相关行，保留其余内容）"""
     existing: dict[str, str] = {}
+    original_lines: list[str] = []
 
     if ENV_FILE.exists():
-        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, _, v = line.partition("=")
+        original_lines = ENV_FILE.read_text(encoding="utf-8").splitlines()
+        for line in original_lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and "=" in stripped:
+                k, _, v = stripped.partition("=")
                 existing[k.strip()] = v.strip()
 
     # 注入/覆盖关键 key
@@ -67,9 +69,56 @@ def _write_env(deepseek_api_key: str, model: str):
         existing["HERMES_API_KEY"] = secrets.token_hex(32)
     if not existing.get("WEBUI_SECRET_KEY"):
         existing["WEBUI_SECRET_KEY"] = secrets.token_hex(32)
+    if not existing.get("HERMES_HOST_DIR"):
+        existing["HERMES_HOST_DIR"] = str(pathlib.Path.home())
 
-    lines = [f"{k}={v}" for k, v in existing.items()]
-    ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    updates = {
+        "DEEPSEEK_API_KEY": existing["DEEPSEEK_API_KEY"],
+        "DEFAULT_MODEL": existing["DEFAULT_MODEL"],
+        "ENABLE_TITLE_GENERATION": "false",
+        "ENABLE_TAGS_GENERATION": "false",
+        "ENABLE_FOLLOW_UP_GENERATION": "false",
+        "ENABLE_LIGHTWEIGHT_ROUTING": "true",
+        "OPDS_SHARED_MEMORY_PATH": "/host/OpenDeepSeek-Memory/profile.md",
+        "OPDS_MEMORY_SNAPSHOT_MAX_CHARS": "4000",
+        "HERMES_API_KEY": existing["HERMES_API_KEY"],
+        "WEBUI_SECRET_KEY": existing["WEBUI_SECRET_KEY"],
+        "HERMES_HOST_DIR": existing["HERMES_HOST_DIR"],
+    }
+    seen: set[str] = set()
+    output_lines: list[str] = []
+
+    for line in original_lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            k, _, _ = stripped.partition("=")
+            key = k.strip()
+            if key in updates:
+                output_lines.append(f"{key}={updates[key]}")
+                seen.add(key)
+                continue
+        output_lines.append(line)
+
+    if output_lines and output_lines[-1].strip():
+        output_lines.append("")
+    for key, value in updates.items():
+        if key not in seen:
+            output_lines.append(f"{key}={value}")
+
+    ENV_FILE.write_text("\n".join(output_lines) + "\n", encoding="utf-8")
+
+
+def _normalize_model(model: str) -> str:
+    """兼容旧表单值，但最终只写 DeepSeek V4 模型名。"""
+    aliases = {
+        "deepseek-chat": "deepseek-v4-flash",
+        # 2026-07-24 前的兼容别名：reasoner 是 V4 Flash 思考模式，不是 v4-pro。
+        "deepseek-reasoner": "deepseek-v4-flash",
+    }
+    model = aliases.get(model, model)
+    if model not in {"deepseek-v4-flash", "deepseek-v4-pro"}:
+        return "deepseek-v4-flash"
+    return model
 
 
 def _check_service(url: str, timeout: int = 3) -> bool:
@@ -234,7 +283,7 @@ class OnboardingHandler(http.server.BaseHTTPRequestHandler):
             return
 
         api_key: str = (data.get("deepseek_api_key") or "").strip()
-        model: str = (data.get("model") or "deepseek-chat").strip()
+        model: str = _normalize_model((data.get("model") or "deepseek-v4-flash").strip())
 
         # 基础校验
         if not api_key:
@@ -325,16 +374,15 @@ class OnboardingHandler(http.server.BaseHTTPRequestHandler):
 # --------------------------------------------------------------------------- #
 
 def main():
-    import socket
-
     # 让端口可重用
     class ReusableServer(http.server.HTTPServer):
         allow_reuse_address = True
 
-    server = ReusableServer(("0.0.0.0", PORT), OnboardingHandler)
+    server = ReusableServer((HOST, PORT), OnboardingHandler)
 
     print(f"\n✨ OpenDeepSeek Onboarding Server 已启动")
     print(f"   访问地址：http://localhost:{PORT}")
+    print(f"   监听地址：{HOST}:{PORT}（仅本机）")
     print(f"   按 Ctrl+C 停止\n")
 
     # 尝试自动打开浏览器

@@ -1,6 +1,6 @@
 # OpenDeepSeek 一键部署完整指南
 
-> 本地运行的 Agentic AI 助手，基于 Open WebUI + Hermes Agent + DeepSeek V4，部署后访问 http://localhost:3000 即可使用。
+> 本地运行的 Agentic AI 助手，基于 Open WebUI + Hermes Smart Bridge + Hermes Agent + DeepSeek V4，部署后访问 http://localhost:3000 即可使用。
 
 ---
 
@@ -9,14 +9,17 @@
 只需一行命令：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 然后按提示走完 3 步：
 
-1. 等待约 1 分钟（脚本自动拉取镜像并启动容器）
-2. 输入你的 DeepSeek API Key
-3. 浏览器自动打开 http://localhost:3000，直接开始对话
+1. 脚本检查 Docker / Git / curl，缺什么会给出安装命令
+2. 选择安装目录，浏览器打开配置向导
+3. 输入你的 DeepSeek API Key，等待容器启动
+4. 浏览器自动打开 http://localhost:3000，直接开始对话
+
+如果你拿到的是发布 zip 包：解压后在 macOS 上双击 `OpenDeepSeek.command`；其他系统在项目目录执行 `./setup.sh --web`。
 
 ---
 
@@ -37,11 +40,11 @@ bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/ma
 ### 方式 A：远程一键（推荐普通用户）
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 - 自动检测操作系统
-- 自动安装依赖并启动服务
+- 自动检测依赖、clone 项目、启动配置向导和服务
 - 默认启用家庭模式（无需注册登录，访问即用）
 
 ### 方式 B：手动 git clone
@@ -49,9 +52,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/ma
 适合想看源码或修改配置的用户。
 
 ```bash
-git clone https://github.com/yourusername/opendeepseek.git
+git clone https://github.com/mouxue56-debug/opendeepseek.git
 cd opendeepseek
-./setup.sh
+./setup.sh --web
 ```
 
 ### 方式 C：Docker Compose 直接运行（懂 Docker 的用户）
@@ -59,7 +62,7 @@ cd opendeepseek
 适合已熟悉 Docker 且想完全自主控制配置的用户。
 
 ```bash
-git clone https://github.com/yourusername/opendeepseek.git
+git clone https://github.com/mouxue56-debug/opendeepseek.git
 cd opendeepseek
 cp .env.example .env
 # 编辑 .env，填入 DEEPSEEK_API_KEY=your_key_here
@@ -83,7 +86,7 @@ brew install --cask docker
 3. 等待顶栏 Docker 图标稳定后，运行 install.sh：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 ### Ubuntu / Debian
@@ -103,7 +106,7 @@ sudo usermod -aG docker $USER && newgrp docker
 3. 运行 install.sh：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 ### CentOS / RHEL / Rocky Linux
@@ -119,7 +122,7 @@ sudo usermod -aG docker $USER && newgrp docker
 2. 运行 install.sh：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 ### Windows（通过 WSL2）
@@ -141,7 +144,7 @@ wsl --install -d Ubuntu-22.04
 4. 打开 WSL Ubuntu 终端，运行 install.sh：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 ---
@@ -171,8 +174,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/ma
 | 问题 | 解决方案 |
 |---|---|
 | `Cannot connect to Docker daemon` | macOS：启动 Docker.app；Linux：`sudo systemctl start docker` |
-| `port 3000 already in use` | 在 `docker-compose.yml` 中将端口改为其他值，例如 `3001:8080` |
-| `git clone` 速度过慢 | install.sh 自动尝试 ghproxy 镜像；也可手动：`git clone https://ghproxy.com/https://github.com/yourusername/opendeepseek.git` |
+| `port 3000 already in use` | 在 `docker-compose.yml` 中将端口改为其他值，例如 `127.0.0.1:3002:8080` |
+| `git clone` 速度过慢 | install.sh 自动尝试 ghproxy 镜像；也可手动：`git clone https://ghproxy.com/https://github.com/mouxue56-debug/opendeepseek.git` |
 | 拉取 Docker 镜像太慢 | 配置 Docker 镜像加速，详见 [CHINA-NETWORK.md](CHINA-NETWORK.md) |
 | 浏览器打开但显示白屏 | 首次启动较慢，等待 30 秒后刷新；或运行 `docker compose logs open-webui` 查看日志 |
 | API Key 无效 | 确认 `.env` 中 `DEEPSEEK_API_KEY` 已正确填写且无多余空格，重启服务：`docker compose restart` |

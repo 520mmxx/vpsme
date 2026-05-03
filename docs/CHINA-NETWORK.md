@@ -1,6 +1,6 @@
 # 中国网络环境部署指南
 
-> 本文档面向在中国大陆网络环境下部署 OpenDeepSeek 的用户。项目默认架构（Open WebUI 直连 DeepSeek V4）在国内可直接运行：DeepSeek API 国内 CDN 节点稳定访问，**无需翻墙**。仅 Docker 镜像下载和可选的 SearXNG 联网搜索可能需要镜像加速。
+> 本文档面向在中国大陆网络环境下部署 OpenDeepSeek 的用户。项目默认架构是 Open WebUI → Smart Bridge → DeepSeek V4（普通问答）/ Hermes Agent（真任务）；DeepSeek API 国内 CDN 节点稳定访问，**无需翻墙**。仅 Docker 镜像下载和可选的 SearXNG 联网搜索可能需要镜像加速。
 
 ---
 
@@ -84,7 +84,7 @@ sudo systemctl restart docker
 
 ## 4. setup.sh 中文优化模式详解
 
-运行 `./setup.sh` 时，若选择启用中文优化模式，脚本会自动完成以下调整：
+运行 `./setup.sh --web` 或 `./setup.sh --advanced` 时，若选择启用中文优化模式，脚本会自动完成以下调整：
 
 | 调整项 | 具体行为 |
 |--------|----------|
@@ -116,10 +116,10 @@ sudo systemctl restart docker
 
 ```bash
 # 方案一：ghproxy
-git clone https://ghproxy.com/https://github.com/yourusername/opendeepseek.git
+git clone https://ghproxy.com/https://github.com/mouxue56-debug/opendeepseek.git
 
 # 方案二：gitclone
-git clone https://gitclone.com/github.com/yourusername/opendeepseek.git
+git clone https://gitclone.com/github.com/mouxue56-debug/opendeepseek.git
 ```
 
 ### 长期配置（推荐）

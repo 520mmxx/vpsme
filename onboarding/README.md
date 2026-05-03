@@ -1,6 +1,6 @@
 # OpenDeepSeek Onboarding Server
 
-零依赖 Python HTTP Server，引导小白通过浏览器图形界面完成 API Key 配置并一键启动整套服务。
+零依赖 Python HTTP Server，引导小白通过浏览器图形界面完成 API Key 配置，并一键启动 Open WebUI + Hermes Smart Bridge + Hermes Agent + DeepSeek V4 Flash。
 
 ## 功能概览
 
@@ -10,6 +10,26 @@
 | `/static/*` | GET | 静态资源（CSS / JS / 图片）|
 | `/api/configure` | POST | 接收 API Key，写 .env，启动 docker compose |
 | `/api/status` | GET | 查询启动状态，ready=true 时前端自动跳转 |
+
+## 用户会看到什么
+
+访问 `http://localhost:3001` 后，用户只需要做三件事：
+
+1. 点击“开始配置”。
+2. 粘贴 DeepSeek API Key。
+3. 选择模型，默认 `deepseek-v4-flash`，然后点击“激活并启动”。
+
+页面会展示启动阶段：
+
+```text
+写入配置文件 → 启动 Docker 容器 → 等待服务就绪 → 跳转 Open WebUI
+```
+
+完成后自动跳转：
+
+```text
+http://localhost:3000
+```
 
 ## 快速运行
 
@@ -30,7 +50,7 @@ python3 onboarding/server.py
 #!/usr/bin/env bash
 # ... 原有内容 ...
 
-echo "🌸 启动 Onboarding 向导..."
+echo "启动 Onboarding 向导..."
 # 后台启动 onboarding server
 python3 "$(dirname "$0")/onboarding/server.py" &
 ONBOARDING_PID=$!
@@ -58,7 +78,7 @@ python3 onboarding/server.py
 |---|---|
 | **3001** | Onboarding Server（本文件）|
 | 3000 | Open WebUI（配置完成后跳转目标）|
-| 8080 | Hermes API Gateway |
+| 8642 | Hermes API Gateway |
 
 ## 配置写入位置
 
@@ -66,14 +86,24 @@ python3 onboarding/server.py
 
 ```env
 DEEPSEEK_API_KEY=sk-xxxx
-DEFAULT_MODEL=deepseek-chat
+DEFAULT_MODEL=deepseek-v4-flash
 HERMES_API_KEY=<自动生成 64 位随机 hex>
 WEBUI_SECRET_KEY=<自动生成 64 位随机 hex>
+HERMES_HOST_DIR=/Users/你的用户名
 ```
+
+Docker Compose 随后会启动：
+
+```text
+普通问答：Open WebUI → Hermes Smart Bridge → DeepSeek V4 Flash
+真任务：  Open WebUI → Hermes Smart Bridge → Hermes Agent → DeepSeek V4 Flash
+```
+
+其中 Smart Bridge 会处理 Open WebUI 上传的图片：保存到 `/host/OpenDeepSeek-Inputs`，OCR 后把图片改写成文本路径摘要；普通问答直连 DeepSeek，真任务再交给 Hermes。
 
 ## 安全说明
 
-- **仅监听本机（0.0.0.0:3001）**，实际上仅绑定 loopback 即可访问，不对外暴露。
+- **仅监听本机（127.0.0.1:3001）**，不对外暴露。
 - API Key 写入本机 `.env` 文件，**不会经过任何网络**，不会上传。
 - `HERMES_API_KEY` 和 `WEBUI_SECRET_KEY` 使用 Python `secrets.token_hex(32)` 自动生成（64 位加密随机数），每次初次配置生成后保持不变（幂等写入）。
 - 建议配置完成后，在防火墙中关闭端口 3001（或直接停止 onboarding server）。

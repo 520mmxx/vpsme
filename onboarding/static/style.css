@@ -1,5 +1,5 @@
 /* ===================================================================
-   OpenDeepSeek Onboarding — 糖果色设计系统
+   OpenDeepSeek Onboarding — neutral Open WebUI style
    =================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
@@ -804,5 +804,83 @@ body {
   .btn {
     padding: 13px 20px;
     font-size: 0.95rem;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Release neutral polish                                               */
+/* ------------------------------------------------------------------ */
+:root {
+  --pink: #10A37F;
+  --pink-l: #D1FAE5;
+  --pink-ll: #F7F7F8;
+  --mint: #10A37F;
+  --mint-l: #D1FAE5;
+  --mint-ll: #F2F7F5;
+  --lav: #6B7280;
+  --lav-l: #E5E7EB;
+  --lav-ll: #F7F7F8;
+  --yel: #10A37F;
+  --yel-l: #D1FAE5;
+  --yel-ll: #F7F7F8;
+  --peach: #6B7280;
+  --peach-l: #E5E7EB;
+  --peach-ll: #F7F7F8;
+  --sky: #6B7280;
+  --sky-l: #E5E7EB;
+  --sky-ll: #F7F7F8;
+  --cream: #F7F7F8;
+  --cream-d: #F3F4F6;
+  --card: #FFFFFF;
+  --t1: #111827;
+  --t2: #374151;
+  --t3: #6B7280;
+  --t4: #9CA3AF;
+  --radius: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 30px rgba(0,0,0,0.08);
+  --shadow-hover: 0 8px 18px rgba(0,0,0,0.10);
+  --gradient-hero: linear-gradient(135deg, #10A37F 0%, #10A37F 100%);
+  --gradient-btn: linear-gradient(135deg, #10A37F 0%, #0D8F70 100%);
+  --gradient-btn2: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+}
+
+.blobs {
+  display: none;
+}
+
+body {
+  background: var(--cream);
+}
+
+.card {
+  border: 1px solid #E5E7EB;
+}
+
+.gradient-title {
+  background: none;
+  -webkit-text-fill-color: var(--t1);
+  color: var(--t1);
+}
+
+.logo-emoji {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #111827;
+  color: #FFFFFF;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  animation: none;
+}
+
+@media (max-width: 768px) {
+  .logo-emoji {
+    font-size: 1.1rem;
   }
 }

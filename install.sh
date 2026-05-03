@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # OpenDeepSeek 一键远程安装
-# 用法：curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh | bash
-# 或：bash <(curl -fsSL https://raw.githubusercontent.com/yourusername/opendeepseek/main/install.sh)
+# 用法：curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh | bash
+# 或：bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 
 set -euo pipefail
+
+OPENDEEPSEEK_REPO="${OPENDEEPSEEK_REPO:-mouxue56-debug/opendeepseek}"
 
 # ============================================================
 # 颜色 / 输出工具
@@ -209,7 +211,7 @@ if [[ -d "$INSTALL_DIR" ]]; then
       if git pull origin main; then
         ok "代码已更新"
         cd "$INSTALL_DIR"
-        exec ./setup.sh
+        exec ./setup.sh --web
       else
         die "git pull 失败。请检查网络或手动处理冲突后重试。"
       fi
@@ -239,10 +241,10 @@ printf "\n"
 hr
 info "克隆项目..."
 
-REPO_URL="https://github.com/yourusername/opendeepseek.git"
+REPO_URL="https://github.com/${OPENDEEPSEEK_REPO}.git"
 MIRROR_URLS=(
-  "https://ghproxy.com/https://github.com/yourusername/opendeepseek.git"
-  "https://gitclone.com/github.com/yourusername/opendeepseek.git"
+  "https://ghproxy.com/https://github.com/${OPENDEEPSEEK_REPO}.git"
+  "https://gitclone.com/github.com/${OPENDEEPSEEK_REPO}.git"
 )
 
 _try_clone() {
@@ -283,8 +285,8 @@ if [[ "$CLONED" -eq 0 ]]; then
   info "排错建议："
   printf "  1. 检查网络：ping github.com\n"
   printf "  2. 配置代理：export https_proxy=http://your-proxy:port\n"
-  printf "  3. 手动 clone 后运行：cd $INSTALL_DIR && ./setup.sh\n"
-  printf "  4. 帮助文档：https://github.com/yourusername/opendeepseek#installation\n"
+  printf "  3. 手动 clone 后运行：cd $INSTALL_DIR && ./setup.sh --web\n"
+  printf "  4. 帮助文档：https://github.com/${OPENDEEPSEEK_REPO}#installation\n"
   exit 1
 fi
 
@@ -308,7 +310,7 @@ if [[ ! -f "./setup.sh" ]]; then
 fi
 
 chmod +x ./setup.sh
-./setup.sh
+./setup.sh --web
 
 # ============================================================
 # Phase 5: 完成提示（若 setup.sh 本身不打印，则此处兜底）
@@ -328,6 +330,6 @@ printf "    docker compose logs -f        # 查看日志\n"
 printf "    docker compose down           # 停止服务\n"
 printf "    docker compose restart        # 重启服务\n"
 printf "\n"
-printf "  ${CYAN}文档：${NC} https://github.com/yourusername/opendeepseek\n"
+printf "  ${CYAN}文档：${NC} https://github.com/${OPENDEEPSEEK_REPO}\n"
 hr
 printf "\n"

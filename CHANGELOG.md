@@ -77,6 +77,6 @@
 - 初版 setup.sh（基础流程）
 - 初版 README.md（项目方案文档化）
 
-[Unreleased]: https://github.com/yourusername/opendeepseek/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/yourusername/opendeepseek/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/yourusername/opendeepseek/releases/tag/v0.1.0
+[Unreleased]: https://github.com/mouxue56-debug/opendeepseek/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mouxue56-debug/opendeepseek/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/mouxue56-debug/opendeepseek/releases/tag/v0.1.0

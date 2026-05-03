@@ -191,6 +191,28 @@ docker compose logs hermes --tail 30
 - `insufficient balance` → DeepSeek 账户没钱了，去 platform.deepseek.com 充值
 - `connection timeout` → 网络连不上 DeepSeek，国内用户请看 docs/CHINA-NETWORK.md 配置代理
 
+### ❌ 症状：让 AI 生成网站/写文件一直失败，日志里有 `Read-only file system: '/opt/data/SOUL.md'`
+
+**原因**：Hermes Agent 运行时会确保 `/opt/data/SOUL.md` 存在并可写。如果 docker-compose 把 `hermes/SOUL.md` 挂成只读（`:ro`），所有需要进入 Hermes 的真任务都会 500，包括生成网站、读写 `/host`、图片任务、提醒和记忆。
+
+**解决**：
+```bash
+docker compose logs hermes --tail 80
+```
+如果看到 `Read-only file system: '/opt/data/SOUL.md'`，确认 `docker-compose.yml` 里这一行是 `:rw`：
+```yaml
+- ./hermes/SOUL.md:/opt/data/SOUL.md:rw
+```
+然后重建 Hermes：
+```bash
+docker compose up -d --force-recreate hermes hermes-bridge
+```
+最后跑：
+```bash
+bash scripts/smoke-test.sh
+```
+只要第 9 项显示 Smart Bridge 已把任务路由到 Hermes，并实际写入 `/host` 文件，生成网站能力就恢复了。
+
 ### ❌ 症状：上传 PDF 后 AI 说"我看不到内容"
 
 **原因**：知识库还没整理完文档 / 文档是扫描图片（里面的字没法直接读）
@@ -329,14 +351,14 @@ nano .env
    👆 这行命令是删掉配置文件
 
    ```bash
-   ./setup.sh
+   ./setup.sh --web
    ```
    👆 这行命令是从头开始安装配置
    
    ⚠️ 警告：这相当于恢复出厂设置，历史聊天和上传文件全没了
 
 3. **去 GitHub 提 Issue（发求助帖）**：
-   打开 https://github.com/yourusername/opendeepseek/issues
+   打开 https://github.com/mouxue56-debug/opendeepseek/issues
    点 "New Issue"，把下面两个命令的输出结果贴进去，方便作者诊断：
    ```bash
    docker compose ps

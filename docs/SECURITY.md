@@ -1,6 +1,6 @@
 # 安全配置指南
 
-> 本指南对应 OpenDeepSeek v0.2.x。  
+> 本指南对应 OpenDeepSeek v0.4.x。
 > 默认部署模式针对**本地家庭使用**优化，云端 / 公网部署必须按本指南加固。
 
 ---
@@ -26,6 +26,7 @@
 | 知识库泄漏 | 越权访问 + 上传过敏感 PDF | 内部资料被读取 | 同上 |
 | 容器逃逸 | 启用 SearXNG `--profile full` 但未限 cap | 较低风险（SearXNG 沙箱有限） | 保持默认 cap_drop 配置 |
 | Bot 滥用 | 启用 IM 桥接（钉钉/飞书等）但未配 allowlist | 任何 IM 用户都能调用你的 Agent | 设置 `*_ALLOWED_USERS` 白名单 |
+| 本机文件泄漏 | `HERMES_HOST_DIR` 指向用户家目录 + 无认证远程访问 | 访问者可让 Agent 读取/改写 `/host` 下文件 | 只在本机/Tailscale 使用；公网必须 `WEBUI_AUTH=true`；可把 `HERMES_HOST_DIR` 改成专用文件夹 |
 
 ---
 
@@ -90,7 +91,44 @@ tailscale ip -4
 
 ---
 
-## 5. API Key 处理
+## 5. 真 Agent 文件权限（/host）
+
+OpenDeepSeek 默认把 `HERMES_HOST_DIR` 挂载到 Hermes 容器内 `/host`，这样用户才能在 Open WebUI 里真正让 Agent 读写文件、生成网页、整理桌面、做周报。
+
+默认安装通常是：
+
+```ini
+HERMES_HOST_DIR=/Users/你的用户名
+```
+
+容器内对应路径：
+
+```text
+/host/Desktop
+/host/Documents
+/host/Downloads
+/host/OpenDeepSeek-Outputs
+```
+
+项目内置演示 skills 也会以可写方式挂载到 `/opt/data/skills/opendeepseek`。这是为了让 Hermes 的 `skill_manage` 能更新模板、修复 demo、沉淀新方法；它属于 Agent 能力的一部分，不是普通聊天 UI 的装饰。
+
+如果你想收窄权限，改成专用目录：
+
+```ini
+HERMES_HOST_DIR=./agent-files
+```
+
+然后重启：
+
+```bash
+docker compose up -d hermes open-webui
+```
+
+**重要**：一旦启用家目录权限，不要把 `WEBUI_AUTH=false` 的服务暴露到公网。否则访问者可以通过聊天让 Agent 查看或修改 `/host` 下文件。
+
+---
+
+## 6. API Key 处理
 
 ### `.env` 文件
 - mode 600（`setup.sh` 自动设置）
@@ -109,7 +147,7 @@ tailscale ip -4
 
 ---
 
-## 6. IM 桥接安全
+## 7. IM 桥接安全
 
 启用钉钉 / 飞书 / 企微 / QQ Bot 时：
 
@@ -131,7 +169,7 @@ DINGTALK_ALLOWED_USERS=user_id_1,user_id_2
 
 ---
 
-## 7. 漏洞披露
+## 8. 漏洞披露
 
 发现 OpenDeepSeek 安全漏洞？请：
 1. **不要**在 GitHub Issue 公开披露

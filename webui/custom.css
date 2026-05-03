@@ -1,1171 +1,278 @@
 /**
- * OpenDeepSeek — Custom Theme
- * 主题风格：糖果色温暖友好 × Candy Warm
- * 适配：Open WebUI v0.9.2（Tailwind class-based dark mode）
- * 挂载路径：/app/build/static/custom.css
- *
- * 设计规范：
- *   主色   #FF7B9C / #B48EE0   粉色 + 薰衣草
- *   强调色  #5CC9A7             薄荷绿
- *   背景   #FFF8F0             奶油暖白
- *   文字   #3D2C24 / #6B5A50  暖棕色
+ * OpenDeepSeek — Open WebUI neutral polish
+ * 目标：保留 Open WebUI / ChatGPT 类中性体验，只做细节收敛。
+ * 避免：糖果色、纯色色块、装饰渐变、夸张阴影。
  */
 
-/* ─────────────────────────────────────────────
-   0. 设计 Token — 糖果色品牌色系（必须完整保留）
-───────────────────────────────────────────── */
 :root {
-  /* 品牌粉色系 */
-  --owds-pink: #FF7B9C;
-  --owds-pink-l: #FFD1DC;
-  --owds-pink-ll: #FFF0F3;
-
-  /* 薄荷绿系 */
-  --owds-mint: #5CC9A7;
-  --owds-mint-l: #C8F5E4;
-  --owds-mint-ll: #E8FBF3;
-
-  /* 薰衣草系 */
-  --owds-lav: #B48EE0;
-  --owds-lav-l: #E8D5F5;
-  --owds-lav-ll: #F5EEFA;
-
-  /* 柠檬黄系 */
-  --owds-yel: #FFCB45;
-  --owds-yel-l: #FFF0C4;
-  --owds-yel-ll: #FFFBE6;
-
-  /* 蜜桃橘系 */
-  --owds-peach: #FFB088;
-  --owds-peach-l: #FFD9C2;
-  --owds-peach-ll: #FFEEE2;
-
-  /* 天空蓝系 */
-  --owds-sky: #77B5FE;
-  --owds-sky-l: #C8DDFE;
-  --owds-sky-ll: #E8F0FE;
-
-  /* 奶油背景 */
-  --owds-cream: #FFF8F0;
-  --owds-cream-d: #FFF3E6;
-
-  /* 卡片白 */
-  --owds-card: #FFFFFF;
-
-  /* 暖棕文字层次 */
-  --owds-t1: #3D2C24;
-  --owds-t2: #6B5A50;
-  --owds-t3: #9B8A80;
-  --owds-t4: #C4B5A8;
-
-  /* 圆角 */
-  --owds-radius: 16px;
-  --owds-radius-lg: 24px;
-
-  /* 阴影（暖色调，不冰冷） */
-  --owds-shadow: 0 2px 12px rgba(61, 44, 36, 0.06);
-  --owds-shadow-lg: 0 8px 32px rgba(61, 44, 36, 0.10);
-  --owds-shadow-hover: 0 8px 24px rgba(255, 123, 156, 0.15);
-
-  /* Hero 渐变：pink → lav → sky */
-  --owds-gradient-hero: linear-gradient(135deg, var(--owds-pink) 0%, var(--owds-lav) 50%, var(--owds-sky) 100%);
-
-  /* 缓动曲线 */
-  --owds-ease: cubic-bezier(0.22, 1, 0.36, 1);
-
-  /* 字体堆栈（中文优先） */
-  --owds-font: 'Noto Sans SC', "PingFang SC", "Microsoft YaHei UI",
-    "Microsoft YaHei", "Hiragino Sans GB", system-ui, -apple-system, sans-serif;
-
-  --owds-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code",
-    ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --ods-font: "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei",
+    "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --ods-mono: "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Consolas,
+    ui-monospace, monospace;
+  --ods-bg: #ffffff;
+  --ods-panel: #ffffff;
+  --ods-muted: #f7f7f8;
+  --ods-muted-2: #f1f1f2;
+  --ods-border: #e5e5e5;
+  --ods-text: #171717;
+  --ods-subtle: #5f6368;
+  --ods-soft: #8a8f98;
+  --ods-accent: #10a37f;
+  --ods-accent-hover: #0d8f70;
+  --ods-radius: 10px;
+  --ods-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-
-/* ─────────────────────────────────────────────
-   1. 全局基础 — 奶油背景 + 暖棕字体
-   强制覆盖 dark mode：糖果色不适合深色
-───────────────────────────────────────────── */
 html,
-html.dark {
-  background-color: var(--owds-cream) !important;
-  color: var(--owds-t1) !important;
-}
-
-body,
-html.dark body {
-  font-family: var(--owds-font) !important;
-  background-color: var(--owds-cream) !important;
-  color: var(--owds-t1) !important;
+body {
+  font-family: var(--ods-font) !important;
+  background: var(--ods-bg) !important;
+  color: var(--ods-text) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  position: relative;
 }
 
-/* 装饰 blob — pink 暖光（右上角） */
-body::before {
-  content: '';
-  position: fixed;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: var(--owds-pink-l);
-  filter: blur(120px);
-  opacity: 0.3;
-  top: -200px;
-  right: -200px;
-  pointer-events: none;
-  z-index: 0;
+html.dark,
+html.dark body {
+  --ods-bg: #171717;
+  --ods-panel: #212121;
+  --ods-muted: #2a2a2a;
+  --ods-muted-2: #303030;
+  --ods-border: #3a3a3a;
+  --ods-text: #f4f4f4;
+  --ods-subtle: #c7c7c7;
+  --ods-soft: #9b9b9b;
+  background: var(--ods-bg) !important;
+  color: var(--ods-text) !important;
 }
 
-/* 装饰 blob — lav 暖光（左下角） */
-body::after {
-  content: '';
-  position: fixed;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: var(--owds-lav-l);
-  filter: blur(120px);
-  opacity: 0.25;
-  bottom: -150px;
-  left: -150px;
-  pointer-events: none;
-  z-index: 0;
+code,
+pre,
+kbd,
+samp,
+.font-mono,
+[class*="font-mono"] {
+  font-family: var(--ods-mono) !important;
 }
 
-/* 代码字体 */
-code, pre, kbd, samp,
-.font-mono, [class*="font-mono"] {
-  font-family: var(--owds-font-mono) !important;
-}
-
-/* 应用容器 */
 #app {
-  background-color: var(--owds-cream) !important;
-  position: relative;
-  z-index: 1;
+  background: var(--ods-bg) !important;
 }
 
-
-/* ─────────────────────────────────────────────
-   2. 覆盖 Tailwind 暗色背景类 → 奶油浅色
-   Open WebUI 大量使用 bg-gray-* dark:bg-gray-*
-───────────────────────────────────────────── */
-
-/* 深色 gray 背景统一转奶油 */
-.dark .bg-gray-950,
-.dark [class*="bg-gray-950"],
-.dark .bg-gray-900,
-.dark [class*="bg-gray-900"] {
-  background-color: var(--owds-cream) !important;
-  color: var(--owds-t1) !important;
+body::before,
+body::after {
+  content: none !important;
+  display: none !important;
 }
 
-.dark .bg-gray-850,
-.dark [class*="bg-gray-850"],
-.dark .bg-gray-800,
-.dark [class*="bg-gray-800"] {
-  background-color: var(--owds-cream-d) !important;
-  color: var(--owds-t1) !important;
+/* Neutralize the previous candy theme and any full-color panels. */
+[class*="from-pink"],
+[class*="to-pink"],
+[class*="from-purple"],
+[class*="to-purple"],
+[class*="from-rose"],
+[class*="to-rose"],
+[class*="from-yellow"],
+[class*="to-yellow"],
+[class*="from-orange"],
+[class*="to-orange"] {
+  --tw-gradient-from: transparent !important;
+  --tw-gradient-to: transparent !important;
 }
 
-.dark .bg-gray-700,
-.dark [class*="bg-gray-700"],
-.dark .bg-gray-600,
-.dark [class*="bg-gray-600"] {
-  background-color: var(--owds-pink-ll) !important;
-  color: var(--owds-t1) !important;
+.bg-pink-50,
+.bg-pink-100,
+.bg-purple-50,
+.bg-purple-100,
+.bg-rose-50,
+.bg-rose-100,
+.bg-yellow-50,
+.bg-yellow-100,
+.bg-orange-50,
+.bg-orange-100,
+.dark .bg-pink-950,
+.dark .bg-purple-950,
+.dark .bg-rose-950,
+.dark .bg-yellow-950,
+.dark .bg-orange-950 {
+  background-color: var(--ods-muted) !important;
 }
 
-/* 浅色 gray 背景转奶油 */
-.bg-gray-50,
-.dark .bg-gray-50 {
-  background-color: var(--owds-cream) !important;
-}
-
-.bg-white,
-.dark .bg-white {
-  background-color: var(--owds-card) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   3. 文字颜色覆盖
-───────────────────────────────────────────── */
-
-/* 覆盖所有深色 text 为暖棕 */
-.dark .text-white,
-.dark .dark\:text-white,
-.dark .text-gray-100,
-.dark .dark\:text-gray-100,
-.dark .text-gray-200,
-.dark .dark\:text-gray-200 {
-  color: var(--owds-t1) !important;
-}
-
-.dark .text-gray-300,
-.dark .dark\:text-gray-300,
-.dark .text-gray-400,
-.dark .dark\:text-gray-400,
-.dark .text-gray-500,
-.dark .dark\:text-gray-500 {
-  color: var(--owds-t2) !important;
-}
-
-.dark .text-gray-600,
-.dark .dark\:text-gray-600 {
-  color: var(--owds-t3) !important;
-}
-
-/* 保证浅色 text-gray-900 不变 */
-.text-gray-900,
-.dark .text-gray-900,
-.dark .dark\:text-gray-100 {
-  color: var(--owds-t1) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   4. 侧栏 Sidebar — 奶油色 + 圆角 + 柔和阴影
-───────────────────────────────────────────── */
+/* Layout surfaces */
 #sidebar,
 [id*="sidebar"],
-.dark #sidebar,
-.dark [id*="sidebar"],
-nav[class*="flex-col"],
-.dark nav[class*="flex-col"] {
-  background-color: var(--owds-card) !important;
-  border-right: 1px solid var(--owds-pink-l) !important;
-  box-shadow: var(--owds-shadow) !important;
+nav[class*="flex-col"] {
+  background: var(--ods-muted) !important;
+  border-right: 1px solid var(--ods-border) !important;
+  box-shadow: none !important;
 }
 
-/* 侧栏顶部 logo 区 */
-.dark [class*="bg-gray-50"][class*="dark:bg-gray-950"],
-#sidebar [class*="flex"][class*="items-center"][class*="py"] {
-  background-color: var(--owds-card) !important;
+html.dark #sidebar,
+html.dark [id*="sidebar"],
+html.dark nav[class*="flex-col"] {
+  background: #181818 !important;
+  border-right-color: var(--ods-border) !important;
 }
 
-/* 聊天历史条目 hover */
-#sidebar [class*="hover:bg-gray"],
-.dark [class*="hover:bg-gray-100"],
-.dark button[class*="hover:bg-gray-"] {
-  transition: background-color 0.2s var(--owds-ease),
-              box-shadow 0.2s var(--owds-ease),
-              transform 0.2s var(--owds-ease);
-}
-
-#sidebar [class*="hover:bg-gray"]:hover,
-.dark [class*="hover:bg-gray-100"]:hover,
-.dark button[class*="hover:bg-gray-"]:hover {
-  background-color: var(--owds-pink-ll) !important;
-  transform: translateX(2px);
-}
-
-/* 侧栏已选中项 */
-.dark .bg-gray-200,
-.dark [class*="bg-gray-200"] {
-  background-color: var(--owds-pink-ll) !important;
-  box-shadow: inset 3px 0 0 var(--owds-pink) !important;
-}
-
-/* 侧栏新建对话按钮 */
-#sidebar button[class*="rounded"] {
-  border-radius: var(--owds-radius) !important;
-  transition: box-shadow 0.2s var(--owds-ease), transform 0.2s var(--owds-ease);
-}
-
-#sidebar button[class*="rounded"]:hover {
-  box-shadow: var(--owds-shadow-hover) !important;
-  transform: translateY(-2px);
-}
-
-
-/* ─────────────────────────────────────────────
-   5. 顶栏 Header / Navbar
-   渐变：pink → lav，模糊玻璃效果
-───────────────────────────────────────────── */
-header,
-[role="banner"],
-.sticky.top-0,
-.dark header,
-.dark [role="banner"],
-.dark .sticky.top-0 {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 240, 243, 0.92) 0%,
-    rgba(245, 238, 250, 0.92) 100%
-  ) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border-bottom: 1px solid var(--owds-pink-l) !important;
-  box-shadow: var(--owds-shadow) !important;
-}
-
-/* 品牌标题（欢迎页 h1/h2/h3 大标题） */
-.dark [class*="text-xl"][class*="font-bold"],
-.dark [class*="font-semibold"][class*="text-lg"],
-[class*="text-xl"][class*="font-bold"],
-[class*="font-semibold"][class*="text-lg"] {
-  background: var(--owds-gradient-hero);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* 欢迎页大标题 */
-h1[class*="text-2xl"],
-h1[class*="text-3xl"],
-h2[class*="text-2xl"],
-.dark h1[class*="text-2xl"],
-.dark h1[class*="text-3xl"],
-.dark h2[class*="text-2xl"] {
-  color: var(--owds-t1) !important;
-}
-
-/* 欢迎页副标题 */
-p[class*="text-gray-500"],
-p[class*="text-gray-400"],
-.dark p[class*="text-gray-500"],
-.dark p[class*="text-gray-400"] {
-  color: var(--owds-t2) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   6. 聊天区域 — 主内容背景
-───────────────────────────────────────────── */
 main,
 [role="main"],
-.dark main,
-.dark [role="main"] {
-  background-color: var(--owds-cream) !important;
-  color: var(--owds-t1) !important;
+[class*="chat"],
+[class*="conversation"] {
+  background-color: var(--ods-bg) !important;
 }
 
-/* ─────────────────────────────────────────────
-   7. 聊天气泡
-   User: pink-ll 背景 + pink 边框（温暖）
-   Assistant: card 白色 + lav-l 边框（清晰）
-───────────────────────────────────────────── */
-
-/* 用户消息 */
-[class*="user"] .rounded-3xl,
-.dark [class*="user"] .rounded-3xl,
-.bg-gray-500\/20,
-.dark .bg-gray-500\/20,
-[class*="bg-gray-500\/20"],
-.dark [class*="bg-gray-500\/20"] {
-  background-color: var(--owds-pink-ll) !important;
-  border: 1px solid var(--owds-pink-l) !important;
-  border-radius: var(--owds-radius) !important;
-  color: var(--owds-t1) !important;
-}
-
-/* 助手消息区域 */
-.message-content,
-.dark .message-content,
-[class*="assistant"] .prose,
-.dark [class*="assistant"] .prose {
-  color: var(--owds-t1) !important;
-}
-
-/* 助手消息卡片容器 */
-[class*="assistant"] [class*="rounded"],
-.dark [class*="assistant"] [class*="rounded"] {
-  background-color: var(--owds-card) !important;
-  border: 1px solid var(--owds-lav-l) !important;
-  border-radius: var(--owds-radius) !important;
-  box-shadow: var(--owds-shadow) !important;
-  color: var(--owds-t1) !important;
-}
-
-/* 消息淡入动画 */
-@keyframes owds-msg-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-[class*="message"]:last-child,
-.dark [class*="message"]:last-child {
-  animation: owds-msg-in 0.35s var(--owds-ease) forwards;
-}
-
-/* 消息分隔线 */
-.border-gray-100,
-.dark .border-gray-100,
-.dark\:border-gray-850\/30,
-.dark .dark\:border-gray-850\/30 {
-  border-color: var(--owds-pink-l) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   8. Markdown Prose 渲染
-   标题 t1、链接 pink、表格 cream-d 边框
-───────────────────────────────────────────── */
-.prose,
-.dark .prose {
-  color: var(--owds-t1) !important;
-}
-
-.prose h1, .prose h2, .prose h3,
-.prose h4, .prose h5, .prose h6,
-.dark .prose h1, .dark .prose h2, .dark .prose h3,
-.dark .prose h4, .dark .prose h5, .dark .prose h6 {
-  color: var(--owds-t1) !important;
-  font-weight: 700;
-}
-
-/* 链接 pink 色，hover 加下划线 */
-.prose a,
-.dark .prose a {
-  color: var(--owds-pink) !important;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s var(--owds-ease), opacity 0.2s;
-}
-
-.prose a:hover,
-.dark .prose a:hover {
-  border-bottom-color: var(--owds-pink);
-  opacity: 0.85;
-}
-
-.prose strong,
-.dark .prose strong {
-  color: var(--owds-t1) !important;
-  font-weight: 700;
-}
-
-/* 行内代码 — lav 浅色背景 */
-.prose code,
-.dark .prose code {
-  color: var(--owds-lav) !important;
-  background-color: var(--owds-lav-ll) !important;
-  border: 1px solid var(--owds-lav-l) !important;
-  border-radius: 6px;
-  padding: 0.1em 0.4em;
-  font-size: 0.88em;
-}
-
-/* 代码块 */
-.prose pre,
-.dark .prose pre {
-  background-color: var(--owds-cream-d) !important;
-  border: 1px solid var(--owds-lav-l) !important;
-  border-radius: var(--owds-radius) !important;
-  box-shadow: var(--owds-shadow) !important;
-  color: var(--owds-t1) !important;
-}
-
-.prose pre code,
-.dark .prose pre code {
-  background-color: transparent !important;
-  border: none !important;
-  color: inherit !important;
-  padding: 0;
-}
-
-/* 引用块 */
-.prose blockquote,
-.dark .prose blockquote {
-  border-left-color: var(--owds-pink) !important;
-  background-color: var(--owds-pink-ll) !important;
-  color: var(--owds-t2) !important;
-  border-radius: 0 var(--owds-radius) var(--owds-radius) 0;
-}
-
-/* 表格 */
-.prose table th,
-.dark .prose table th {
-  background-color: var(--owds-lav-ll) !important;
-  color: var(--owds-lav) !important;
-  border-bottom: 2px solid var(--owds-lav-l) !important;
-}
-
-.prose table td,
-.dark .prose table td {
-  border-color: var(--owds-cream-d) !important;
-  color: var(--owds-t1) !important;
-}
-
-.prose table tr:nth-child(even),
-.dark .prose table tr:nth-child(even) {
-  background-color: var(--owds-cream) !important;
-}
-
-/* 分隔线 */
-.prose hr,
-.dark .prose hr,
-hr,
-.dark hr,
-.divider,
-.dark .divider {
-  border-color: var(--owds-pink-l) !important;
-}
-
-/* 无序/有序列表标记颜色 */
-.prose ul li::marker,
-.dark .prose ul li::marker {
-  color: var(--owds-pink) !important;
-}
-
-.prose ol li::marker,
-.dark .prose ol li::marker {
-  color: var(--owds-lav) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   9. 输入框
-   cream-d 背景 + 圆角 24px + focus 时 pink 边框
-───────────────────────────────────────────── */
-textarea,
-input[type="text"],
-input[type="search"],
-input[type="email"],
-input[type="password"],
-.dark textarea,
-.dark input[type="text"],
-.dark input[type="search"],
-.dark input[type="email"],
-.dark input[type="password"] {
-  background-color: var(--owds-card) !important;
-  color: var(--owds-t1) !important;
-  border: 1.5px solid var(--owds-pink-l) !important;
-  border-radius: var(--owds-radius-lg) !important;
-  transition: border-color 0.2s var(--owds-ease),
-              box-shadow 0.2s var(--owds-ease);
-}
-
-textarea:focus,
-input[type="text"]:focus,
-input[type="search"]:focus,
-.dark textarea:focus,
-.dark input[type="text"]:focus,
-.dark input[type="search"]:focus {
-  border-color: var(--owds-pink) !important;
-  box-shadow: 0 0 0 3px rgba(255, 123, 156, 0.18) !important;
-  outline: none !important;
-}
-
-/* placeholder 文字 */
-textarea::placeholder,
-input::placeholder,
-.dark textarea::placeholder,
-.dark input::placeholder {
-  color: var(--owds-t4) !important;
-}
-
-/* 聊天输入框外壳容器 */
-.dark [class*="bg-gray-600"],
-.dark .dark\:bg-gray-700,
-.dark [class*="bg-gray-700"] {
-  background-color: var(--owds-card) !important;
-  border: 1.5px solid var(--owds-pink-l) !important;
-  border-radius: var(--owds-radius-lg) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   10. 按钮
-   主按钮: gradient-hero + 悬停上抬
-   次按钮: pink-ll 背景 + pink 文字
-───────────────────────────────────────────── */
-
-/* 主要按钮（发送、确认等） */
-button[class*="bg-black"],
-.dark button[class*="bg-black"],
-button[type="submit"],
-.dark button[type="submit"] {
-  background: var(--owds-gradient-hero) !important;
-  color: #FFFFFF !important;
-  border-radius: var(--owds-radius) !important;
-  border: none !important;
-  font-weight: 600 !important;
-  transition: box-shadow 0.2s var(--owds-ease),
-              transform 0.2s var(--owds-ease),
-              opacity 0.15s;
-}
-
-button[class*="bg-black"]:hover,
-.dark button[class*="bg-black"]:hover,
-button[type="submit"]:hover,
-.dark button[type="submit"]:hover {
-  box-shadow: var(--owds-shadow-hover) !important;
-  transform: translateY(-2px);
-  opacity: 0.95;
-}
-
-/* 发送按钮圆形 */
-button[aria-label="Send message"],
-.dark button[aria-label="Send message"],
-[class*="bg-black"][class*="rounded-full"],
-.dark [class*="bg-black"][class*="rounded-full"] {
-  background: var(--owds-gradient-hero) !important;
-  box-shadow: 0 2px 12px rgba(255, 123, 156, 0.3) !important;
-}
-
-button[aria-label="Send message"]:hover,
-.dark button[aria-label="Send message"]:hover {
-  box-shadow: var(--owds-shadow-hover) !important;
-  transform: translateY(-2px);
-}
-
-/* 次要按钮（ghost/outline） */
-button:not([class*="bg-black"]):not([type="submit"]),
-.dark button:not([class*="bg-black"]):not([type="submit"]) {
-  color: var(--owds-t2);
-  transition: background-color 0.2s var(--owds-ease),
-              color 0.15s,
-              transform 0.2s var(--owds-ease),
-              box-shadow 0.2s var(--owds-ease);
-}
-
-/* ghost 按钮 hover */
-button[class*="hover:bg-gray"]:hover,
-.dark button[class*="hover:bg-gray"]:hover {
-  background-color: var(--owds-pink-ll) !important;
-  color: var(--owds-pink) !important;
-}
-
-/* 危险/删除按钮 */
-button[class*="text-red"],
-[class*="text-red-500"],
-.dark button[class*="text-red"],
-.dark [class*="text-red-500"] {
-  color: #E53E3E !important;
-}
-
-/* 按钮通用圆角统一 */
-button {
-  border-radius: var(--owds-radius) !important;
-}
-
-button[class*="rounded-full"] {
-  border-radius: 9999px !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   11. 代码块 — cream-d 背景 + lav-l 边框
-───────────────────────────────────────────── */
-
-/* 代码块顶栏 */
-.code-block-header,
-.dark .code-block-header,
-[class*="code"] [class*="flex"][class*="justify-between"],
-.dark [class*="code"] [class*="flex"][class*="justify-between"] {
-  background-color: var(--owds-lav-ll) !important;
-  border-bottom: 1px solid var(--owds-lav-l) !important;
-  border-radius: var(--owds-radius) var(--owds-radius) 0 0 !important;
-  padding: 8px 16px !important;
-}
-
-/* 语言标签（如 "python", "javascript"） */
-.code-block-header span,
-.dark .code-block-header span,
-[class*="language-label"],
-.dark [class*="language-label"] {
-  color: var(--owds-lav) !important;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-/* 复制按钮 */
-[aria-label*="copy"],
-.dark [aria-label*="copy"],
-button[class*="copy"],
-.dark button[class*="copy"] {
-  color: var(--owds-t3) !important;
-  transition: color 0.2s var(--owds-ease);
-}
-
-[aria-label*="copy"]:hover,
-.dark [aria-label*="copy"]:hover,
-button[class*="copy"]:hover,
-.dark button[class*="copy"]:hover {
-  color: var(--owds-pink) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   12. 下拉菜单 / Dropdown
-   card 白底 + shadow-lg + 圆角
-───────────────────────────────────────────── */
-[role="menu"],
-[role="listbox"],
-[class*="dropdown"],
-.dark [role="menu"],
-.dark [role="listbox"],
-.dark [class*="dropdown"] {
-  background-color: var(--owds-card) !important;
-  border: 1px solid var(--owds-pink-l) !important;
-  border-radius: var(--owds-radius) !important;
-  box-shadow: var(--owds-shadow-lg) !important;
-}
-
-[role="menuitem"]:hover,
-[role="option"]:hover,
-.dark [role="menuitem"]:hover,
-.dark [role="option"]:hover {
-  background-color: var(--owds-pink-ll) !important;
-  color: var(--owds-pink) !important;
-}
-
-/* 选中项 */
-[aria-selected="true"],
-[role="option"][aria-selected="true"],
-.dark [aria-selected="true"],
-.dark [role="option"][aria-selected="true"] {
-  background-color: var(--owds-pink-ll) !important;
-  color: var(--owds-pink) !important;
-  font-weight: 600;
-}
-
-
-/* ─────────────────────────────────────────────
-   13. Modal 弹窗 — card 白底 + shadow-lg
-───────────────────────────────────────────── */
+/* Cards, menus, modals, dropdowns */
 [role="dialog"],
+[role="menu"],
+[data-radix-popper-content-wrapper] > *,
 .modal,
-[class*="modal"],
-.dark [role="dialog"],
-.dark .modal,
-.dark [class*="modal"] {
-  background-color: var(--owds-card) !important;
-  border: 1px solid var(--owds-pink-l) !important;
-  border-radius: var(--owds-radius-lg) !important;
-  box-shadow: var(--owds-shadow-lg) !important;
-  color: var(--owds-t1) !important;
+.popover,
+.dropdown,
+[class*="rounded"][class*="shadow"],
+[class*="bg-white"] {
+  border-color: var(--ods-border) !important;
+  box-shadow: var(--ods-shadow) !important;
 }
 
-/* 弹窗遮罩 — 暖色半透明 */
-[class*="bg-black/60"],
-[class*="bg-black\/60"],
-.dark [class*="bg-black/60"],
-.dark [class*="bg-black\/60"] {
-  background-color: rgba(61, 44, 36, 0.45) !important;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+html.dark [role="dialog"],
+html.dark [role="menu"],
+html.dark [data-radix-popper-content-wrapper] > *,
+html.dark .modal,
+html.dark .popover,
+html.dark .dropdown,
+html.dark [class*="rounded"][class*="shadow"] {
+  background-color: var(--ods-panel) !important;
+  border-color: var(--ods-border) !important;
 }
 
-
-/* ─────────────────────────────────────────────
-   14. 标签页 / Tab
-───────────────────────────────────────────── */
-[role="tab"],
-.dark [role="tab"] {
-  color: var(--owds-t2) !important;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s, border-color 0.2s;
-}
-
-[role="tab"][aria-selected="true"],
-[role="tab"].active,
-.dark [role="tab"][aria-selected="true"],
-.dark [role="tab"].active {
-  color: var(--owds-pink) !important;
-  border-bottom-color: var(--owds-pink) !important;
-  font-weight: 600;
-}
-
-[role="tab"]:hover,
-.dark [role="tab"]:hover {
-  color: var(--owds-t1) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   15. Toggle / Switch
-───────────────────────────────────────────── */
-input[type="checkbox"] + [class*="toggle"],
-[role="switch"][aria-checked="true"],
-.dark input[type="checkbox"] + [class*="toggle"],
-.dark [role="switch"][aria-checked="true"] {
-  background-color: var(--owds-pink) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   16. 设置页面
-───────────────────────────────────────────── */
-.settings-page,
-[class*="settings"],
-.dark .settings-page,
-.dark [class*="settings"] {
-  background-color: var(--owds-cream) !important;
-  color: var(--owds-t1) !important;
-}
-
-/* 设置分组标题 */
-[class*="settings"] [class*="text-xs"][class*="uppercase"],
-.dark [class*="settings"] [class*="text-xs"][class*="uppercase"] {
-  color: var(--owds-pink) !important;
-  letter-spacing: 0.1em;
-}
-
-/* 设置项行分隔 */
-[class*="settings"] [class*="flex"][class*="items-center"][class*="justify-between"],
-.dark [class*="settings"] [class*="flex"][class*="items-center"][class*="justify-between"] {
-  border-bottom: 1px solid var(--owds-cream-d) !important;
-  padding: 12px 0;
-}
-
-
-/* ─────────────────────────────────────────────
-   17. 滚动条 — 粉色调轻量
-───────────────────────────────────────────── */
-::-webkit-scrollbar,
-.dark ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track,
-.dark ::-webkit-scrollbar-track {
-  background: var(--owds-cream);
-}
-
-::-webkit-scrollbar-thumb,
-.dark ::-webkit-scrollbar-thumb {
-  background: var(--owds-pink-l);
-  border-radius: 3px;
-  transition: background 0.2s;
-}
-
-::-webkit-scrollbar-thumb:hover,
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--owds-pink);
-}
-
-
-/* ─────────────────────────────────────────────
-   18. Badge / Tag / Chip
-───────────────────────────────────────────── */
-[class*="badge"],
-[class*="tag"],
-[class*="chip"],
-.dark [class*="badge"],
-.dark [class*="tag"],
-.dark [class*="chip"] {
-  background-color: var(--owds-pink-ll) !important;
-  color: var(--owds-pink) !important;
-  border: 1px solid var(--owds-pink-l) !important;
-  border-radius: 999px !important;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 2px 10px;
-}
-
-
-/* ─────────────────────────────────────────────
-   19. Tooltip — 暖色小弹窗
-───────────────────────────────────────────── */
-[role="tooltip"],
-[class*="tooltip"],
-.dark [role="tooltip"],
-.dark [class*="tooltip"] {
-  background-color: var(--owds-t1) !important;
-  color: var(--owds-cream) !important;
-  border: none !important;
-  border-radius: 10px !important;
-  font-size: 0.78rem !important;
-  box-shadow: var(--owds-shadow-lg) !important;
-  padding: 6px 12px !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   20. 进度条 / Loading skeleton
-───────────────────────────────────────────── */
-[role="progressbar"],
-.animate-pulse,
-.dark [role="progressbar"],
-.dark .animate-pulse {
-  background-color: var(--owds-pink-ll) !important;
-}
-
-/* 流式输出光标 */
-.cursor-blink,
-[class*="typing-indicator"],
-.dark .cursor-blink,
-.dark [class*="typing-indicator"] {
-  color: var(--owds-pink) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   21. 文字选中高亮
-───────────────────────────────────────────── */
-::selection,
-.dark ::selection {
-  background-color: rgba(255, 123, 156, 0.25);
-  color: var(--owds-t1);
-}
-
-::-moz-selection,
-.dark ::-moz-selection {
-  background-color: rgba(255, 123, 156, 0.25);
-  color: var(--owds-t1);
-}
-
-
-/* ─────────────────────────────────────────────
-   22. 焦点可见性（无障碍 focus ring）
-───────────────────────────────────────────── */
-*:focus-visible,
-.dark *:focus-visible {
-  outline: 2px solid var(--owds-pink) !important;
-  outline-offset: 2px !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   23. 图片 / 头像
-───────────────────────────────────────────── */
-img[class*="rounded"],
-[class*="avatar"] img,
-.dark img[class*="rounded"],
-.dark [class*="avatar"] img {
-  border: 2px solid var(--owds-pink-l);
-  border-radius: var(--owds-radius);
-}
-
-
-/* ─────────────────────────────────────────────
-   24. 边框 / border-l 装饰线
-───────────────────────────────────────────── */
-[class*="border-l-4"],
-[class*="border-l-[4px]"],
-.dark [class*="border-l-4"],
-.dark [class*="border-l-[4px]"] {
-  border-left-color: var(--owds-pink) !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   25. 微动画 / Transition
-   侧栏滑入、元素上抬 cubic-bezier(0.22,1,0.36,1)
-───────────────────────────────────────────── */
-
-/* 全局过渡基础 */
+/* Buttons and active accents: ChatGPT-like green, used sparingly. */
 button,
 a,
 input,
 textarea,
-[role="menuitem"],
-.dark button,
-.dark a,
-.dark input,
-.dark textarea,
-.dark [role="menuitem"] {
-  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
-  transition-duration: 0.2s;
-  transition-timing-function: var(--owds-ease);
+select {
+  letter-spacing: 0 !important;
 }
 
-/* 侧栏滑入 */
-#sidebar,
-[id*="sidebar"],
-.dark #sidebar,
-.dark [id*="sidebar"] {
-  transition: transform 0.3s var(--owds-ease),
-              background-color 0.2s ease !important;
+button[class*="bg-black"],
+button[class*="bg-gray-900"],
+button[class*="bg-gray-800"],
+button[class*="bg-green"],
+button[type="submit"] {
+  border-radius: var(--ods-radius) !important;
 }
 
-/* 卡片悬停上抬 */
-[class*="card"],
-.dark [class*="card"] {
-  transition: box-shadow 0.2s var(--owds-ease),
-              transform 0.2s var(--owds-ease);
+button[class*="bg-green"],
+button[type="submit"]:not([disabled]) {
+  background-color: var(--ods-accent) !important;
+  color: #fff !important;
 }
 
-[class*="card"]:hover,
-.dark [class*="card"]:hover {
-  box-shadow: var(--owds-shadow-hover) !important;
-  transform: translateY(-3px);
+button[class*="bg-green"]:hover,
+button[type="submit"]:not([disabled]):hover {
+  background-color: var(--ods-accent-hover) !important;
 }
 
-
-/* ─────────────────────────────────────────────
-   26. 移动端适配 @media (max-width: 768px)
-   - 字号略小
-   - 触摸目标 ≥ 44px
-   - 侧栏全屏 overlay
-   - 输入框 font-size: 16px（防 iOS 缩放）
-───────────────────────────────────────────── */
-@media (max-width: 768px) {
-
-  /* 触摸目标最小 44px */
-  button,
-  [role="button"],
-  a,
-  input,
-  textarea,
-  select,
-  [role="tab"],
-  [role="menuitem"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* 防止 iOS 字体自动缩放 */
-  html {
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-    font-size: 15px;
-  }
-
-  /* 侧栏：全屏覆盖式 overlay（不挤压主内容） */
-  #sidebar,
-  [id*="sidebar"],
-  .dark #sidebar,
-  .dark [id*="sidebar"] {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    height: 100dvh !important;
-    height: 100vh !important;
-    z-index: 50 !important;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    box-shadow: var(--owds-shadow-lg) !important;
-  }
-
-  /* 侧栏遮罩 */
-  .bg-black\/60,
-  .dark .bg-black\/60 {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 49 !important;
-  }
-
-  /* 聊天输入框：全宽 + 防 iOS 缩放 */
-  textarea,
-  input[type="text"],
-  .dark textarea,
-  .dark input[type="text"] {
-    width: 100% !important;
-    font-size: 16px !important;
-    padding-bottom: env(safe-area-inset-bottom, 8px) !important;
-  }
-
-  /* 输入区贴底 + 安全区 */
-  [class*="sticky"][class*="bottom"],
-  .dark [class*="sticky"][class*="bottom"] {
-    padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-  }
-
-  /* 消息列表底部留白（防输入框遮挡） */
-  main [class*="pb-18"],
-  main [class*="pb-6"],
-  .dark main [class*="pb-18"],
-  .dark main [class*="pb-6"] {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px) + 80px, 100px) !important;
-  }
-
-  /* 导航栏内边距缩小 */
-  header,
-  .dark header {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-  }
-
-  /* 模型选择器：限制宽度 */
-  [role="listbox"],
-  [role="combobox"],
-  .dark [role="listbox"],
-  .dark [role="combobox"] {
-    max-width: calc(100vw - 24px) !important;
-  }
-
-  /* 代码块：横向滚动 */
-  .prose pre,
-  .dark .prose pre {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    max-width: calc(100vw - 32px) !important;
-  }
-
-  /* 表格：横向滚动 */
-  .prose table,
-  .dark .prose table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* 用户消息气泡：移动端内边距 */
-  [class*="user"] .rounded-3xl,
-  .dark [class*="user"] .rounded-3xl {
-    padding: 12px 16px !important;
-  }
-
-  /* 装饰 blob 在小屏缩小，避免影响布局 */
-  body::before {
-    width: 300px;
-    height: 300px;
-    top: -100px;
-    right: -100px;
-  }
-
-  body::after {
-    width: 250px;
-    height: 250px;
-    bottom: -80px;
-    left: -80px;
-  }
+button[class*="hover:bg-gray"]:hover,
+a[class*="hover:bg-gray"]:hover,
+[role="button"][class*="hover:bg-gray"]:hover {
+  background-color: var(--ods-muted-2) !important;
 }
 
-
-/* ─────────────────────────────────────────────
-   27. 超小屏（iPhone SE 等 ≤375px）
-───────────────────────────────────────────── */
-@media (max-width: 375px) {
-  html {
-    font-size: 14px;
-  }
-
-  main,
-  .dark main {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-  }
+html.dark button[class*="hover:bg-gray"]:hover,
+html.dark a[class*="hover:bg-gray"]:hover,
+html.dark [role="button"][class*="hover:bg-gray"]:hover {
+  background-color: #303030 !important;
 }
 
-
-/* ─────────────────────────────────────────────
-   28. 平板横向（iPad 769px–1024px）
-───────────────────────────────────────────── */
-@media (min-width: 769px) and (max-width: 1024px) {
-  #sidebar,
-  [id*="sidebar"],
-  .dark #sidebar,
-  .dark [id*="sidebar"] {
-    width: 260px !important;
-  }
+/* Chat input */
+textarea,
+input[type="text"],
+input[type="search"],
+[contenteditable="true"] {
+  color: var(--ods-text) !important;
 }
 
+textarea::placeholder,
+input::placeholder {
+  color: var(--ods-soft) !important;
+}
 
-/* ─────────────────────────────────────────────
-   29. PWA 引导 Banner（pwa-prompt.js 动态注入）
-   说明：Open WebUI 不支持外部 @import URL。
-   CSS 由 pwa-prompt.js 中的 injectCSS() 动态
-   创建 <link> 标签加载 /static/pwa-prompt.css。
-   启用方式：在 Admin Panel → Settings →
-   Interface → Custom JS 中粘贴 pwa-prompt.js
-   的完整内容，或通过 docker volumes 挂载。
-   详见 webui/PWA-SETUP.md
-───────────────────────────────────────────── */
+form:has(textarea),
+[class*="chat-input"],
+[class*="prompt"] form {
+  background-color: var(--ods-panel) !important;
+}
+
+/* Suggestion cards: subtle bordered cells, no color blocks. */
+button.waterfall,
+[role="list"] button,
+[role="listitem"].waterfall {
+  background: var(--ods-panel) !important;
+  border: 1px solid var(--ods-border) !important;
+  border-radius: var(--ods-radius) !important;
+  box-shadow: none !important;
+}
+
+button.waterfall:hover,
+[role="list"] button:hover,
+[role="listitem"].waterfall:hover {
+  background: var(--ods-muted) !important;
+  border-color: #d5d5d5 !important;
+}
+
+html.dark button.waterfall:hover,
+html.dark [role="list"] button:hover,
+html.dark [role="listitem"].waterfall:hover {
+  background: var(--ods-muted-2) !important;
+  border-color: #4a4a4a !important;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+.text-3xl,
+.text-2xl {
+  letter-spacing: 0 !important;
+}
+
+.text-gray-400,
+.text-gray-500,
+.text-gray-600,
+html.dark .text-gray-400,
+html.dark .text-gray-500,
+html.dark .text-gray-600 {
+  color: var(--ods-subtle) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.32);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.48);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@media (max-width: 640px) {
+  button.waterfall,
+  [role="list"] button {
+    border-radius: 8px !important;
+  }
+}

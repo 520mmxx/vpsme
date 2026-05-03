@@ -2,7 +2,7 @@
 set -e
 
 # 解析参数：
-#   --web       浏览器图形界面引导（推荐小白，糖果色 onboarding wizard）
+#   --web       浏览器图形界面引导（推荐小白）
 #   --advanced  命令行完整询问（5 项配置）
 #   默认        命令行极简（只问 API Key）
 SETUP_MODE="simple"
@@ -25,7 +25,7 @@ if [[ "$SETUP_MODE" == "web" ]]; then
     fi
 
     echo ""
-    echo "🌸 启动 OpenDeepSeek Web 安装向导..."
+    echo "启动 OpenDeepSeek Web 安装向导..."
     echo "   浏览器会自动打开 http://localhost:3001"
     echo "   按 Ctrl+C 取消"
     echo ""
@@ -248,6 +248,8 @@ if [[ -z "$SKIP_CONFIG" ]]; then
         WEBUI_SECRET_KEY=$(head -c 32 /dev/urandom | base64 | tr -d '=+/')
     fi
 
+    HERMES_HOST_DIR="${HOME}"
+
     cat > "$ENV_FILE" <<EOF
 # OpenDeepSeek 环境配置
 # 生成时间：$(date '+%Y-%m-%d %H:%M:%S')
@@ -258,6 +260,14 @@ DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
 # 模型选择
 DEFAULT_MODEL=${DEFAULT_MODEL}
 
+# 速度优先：关闭 Open WebUI 额外标题/标签/追问生成，避免一次对话触发多轮 hermes-agent。
+ENABLE_TITLE_GENERATION=false
+ENABLE_TAGS_GENERATION=false
+ENABLE_FOLLOW_UP_GENERATION=false
+ENABLE_LIGHTWEIGHT_ROUTING=true
+OPDS_SHARED_MEMORY_PATH=/host/OpenDeepSeek-Memory/profile.md
+OPDS_MEMORY_SNAPSHOT_MAX_CHARS=4000
+
 # 自动生成密钥
 HERMES_API_KEY=${HERMES_API_KEY}
 WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
@@ -267,6 +277,11 @@ ENABLE_CHINA_MODE=${ENABLE_CHINA_MODE}
 
 # 部署模式（家庭模式 false 跳过登录；团队模式 true 启用 RBAC）
 WEBUI_AUTH=${WEBUI_AUTH}
+
+# 真 Agent 文件系统权限
+# 容器内路径 /host 会指向这里；例如你的桌面是 /host/Desktop
+# 如果想收窄权限，把它改成某个专用文件夹，例如 ./agent-files
+HERMES_HOST_DIR=${HERMES_HOST_DIR}
 EOF
 
     if [[ "$ADD_IM_PLACEHOLDER" -eq 1 ]]; then
