@@ -48,6 +48,9 @@ OCR_LANG = os.environ.get("IMAGE_BRIDGE_OCR_LANG", "chi_sim+eng")
 REQUEST_TIMEOUT = int(os.environ.get("IMAGE_BRIDGE_TIMEOUT", "1800"))
 SHARED_MEMORY_PATH = Path(os.environ.get("OPDS_SHARED_MEMORY_PATH", str(HOST_ROOT / "OpenDeepSeek-Memory" / "profile.md")))
 MEMORY_SNAPSHOT_MAX_CHARS = int(os.environ.get("OPDS_MEMORY_SNAPSHOT_MAX_CHARS", "4000"))
+HOST_DISPLAY_PREFIX = os.environ.get("OPDS_HOST_DISPLAY_PREFIX", "").rstrip("/")
+HERMES_AGENT_MAX_TOKENS = int(os.environ.get("HERMES_AGENT_MAX_TOKENS", "32768"))
+HERMES_AGENT_STREAM = os.environ.get("HERMES_AGENT_STREAM", "false").lower() == "true"
 
 
 AGENT_PATTERNS = [
@@ -57,7 +60,7 @@ AGENT_PATTERNS = [
     r"\b(?:terminal|bash|shell|python|cron|memory|skill|subagent)\b",
     r"工具|调用|执行|运行|命令|终端|脚本",
     r"创建.*(?:文件|目录|提醒|任务|网页|网站|PPT|幻灯片|报告|周报)",
-    r"生成.*(?:文件|网页|网站|PPT|幻灯片|报告|周报|index\\.html)",
+    r"生成.*(?:文件|网页|网站|PPT|幻灯片|报告|周报|index\.html)",
     r"保存到|写入|落盘|输出到|实际创建|实际使用",
     r"提醒我|定时|闹钟|计划任务|后台任务",
     r"记住|长期记忆|你记得|记忆|偏好",
@@ -65,6 +68,11 @@ AGENT_PATTERNS = [
     r"桌面|文件夹|目录|下载目录|Documents|Downloads|Desktop",
     r"查看.*文件|列出.*文件|整理.*文件|移动.*文件|删除.*文件|重命名",
     r"上传图片|截图|证据图|图片路径|OCR",
+]
+
+ARTIFACT_PATTERNS = [
+    r"网页|网站|PPT|幻灯片|演示文稿|index\.html|HTML",
+    r"生成.*(?:页面|落地页|官网|展示|deck|slides?)",
 ]
 
 
@@ -281,6 +289,10 @@ def should_route_to_hermes(payload: dict[str, Any], image_count: int) -> tuple[b
     return False, "simple-chat"
 
 
+def is_artifact_task(text: str) -> bool:
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in ARTIFACT_PATTERNS)
+
+
 def read_shared_memory_snapshot() -> str:
     try:
         if not SHARED_MEMORY_PATH.exists():
@@ -318,6 +330,113 @@ def prepare_deepseek_payload(payload: dict[str, Any]) -> bytes:
     direct.pop("tools", None)
     direct.pop("tool_choice", None)
     return json.dumps(direct, ensure_ascii=False).encode("utf-8")
+
+
+def host_path_to_local(path: str) -> str:
+    if not path.startswith("/host"):
+        return path
+    if not HOST_DISPLAY_PREFIX or HOST_DISPLAY_PREFIX == "/host":
+        return path
+    suffix = path.removeprefix("/host").lstrip("/")
+    if not suffix:
+        return HOST_DISPLAY_PREFIX
+    return f"{HOST_DISPLAY_PREFIX}/{suffix}"
+
+
+def file_url_for(path: str) -> str | None:
+    if not path.startswith("/"):
+        return None
+    try:
+        return Path(path).as_uri()
+    except ValueError:
+        return None
+
+
+def host_paths_in_text(text: str) -> list[str]:
+    paths: list[str] = []
+    for match in re.finditer(r"(?<![\w])(/host(?:/[^\s`'\"<>，。；;、]*)?)", text):
+        path = match.group(1).rstrip(".,)")
+        if path and path not in paths:
+            paths.append(path)
+    return paths
+
+
+def append_path_notes(text: str) -> str:
+    if "本机可找路径" in text or "file://" in text:
+        return text
+    paths = host_paths_in_text(text)
+    if not paths:
+        return text
+
+    lines = ["", "", "本机可找路径："]
+    for path in paths[:8]:
+        local_path = host_path_to_local(path)
+        if local_path != path:
+            lines.append(f"- `{path}` → `{local_path}`")
+        else:
+            lines.append(f"- `{path}`")
+        url = file_url_for(local_path)
+        if url:
+            lines.append(f"  打开：`{url}`")
+    return text.rstrip() + "\n".join(lines)
+
+
+def augment_openai_response(content: bytes, upstream_name: str) -> bytes:
+    if upstream_name != "hermes":
+        return content
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except Exception:
+        return content
+    changed = False
+    choices = payload.get("choices")
+    if isinstance(choices, list):
+        for choice in choices:
+            if not isinstance(choice, dict):
+                continue
+            message = choice.get("message")
+            if not isinstance(message, dict):
+                continue
+            text = message.get("content")
+            if isinstance(text, str):
+                updated = append_path_notes(text)
+                if updated != text:
+                    message["content"] = updated
+                    changed = True
+    if not changed:
+        return content
+    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+
+def hermes_system_message(payload: dict[str, Any], reason: str) -> dict[str, str]:
+    text = recent_user_text(payload.get("messages", []) if isinstance(payload.get("messages"), list) else [])
+    parts = [
+        "OpenDeepSeek Smart Bridge 已把本轮请求路由到 Hermes Agent。",
+        "这是执行路径，不是普通聊天。涉及 /host、文件、网页、PPT、提醒、记忆、图片或终端时，必须实际使用工具完成。",
+        "在回复“已保存/已生成”前，必须用工具验证目标文件存在且大小大于 0；验证失败就明确说失败原因。",
+    ]
+    if HOST_DISPLAY_PREFIX and HOST_DISPLAY_PREFIX != "/host":
+        parts.append(f"用户看到的本机路径前缀是 {HOST_DISPLAY_PREFIX}；容器内 /host/... 对应本机 {HOST_DISPLAY_PREFIX}/...。")
+        parts.append("回复文件路径时同时给出 /host 路径和本机路径。")
+    if is_artifact_task(text):
+        parts.append(
+            "网页/PPT/HTML 等大文件不要一次性塞进超长工具参数；如内容较长，请分段写入或用脚本生成，"
+            "避免 tool call 被截断。最后用 ls/wc/test 验证文件。"
+        )
+    parts.append(f"路由原因：{reason}")
+    return {"role": "system", "content": "\n".join(parts)}
+
+
+def prepare_hermes_payload(payload: dict[str, Any], reason: str) -> tuple[bytes, bool]:
+    agent = dict(payload)
+    requested_tokens = agent.get("max_tokens")
+    if not isinstance(requested_tokens, int) or requested_tokens < HERMES_AGENT_MAX_TOKENS:
+        agent["max_tokens"] = HERMES_AGENT_MAX_TOKENS
+    agent["stream"] = bool(agent.get("stream")) and HERMES_AGENT_STREAM
+    messages = agent.get("messages")
+    if isinstance(messages, list):
+        agent["messages"] = [hermes_system_message(agent, reason), *messages]
+    return json.dumps(agent, ensure_ascii=False).encode("utf-8"), bool(agent.get("stream"))
 
 
 def hop_by_hop_headers() -> set[str]:
@@ -396,7 +515,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     if self.path.rstrip("/") == "/v1/chat/completions" and isinstance(payload, dict):
                         route_hermes, reason = should_route_to_hermes(payload, image_count)
                     if route_hermes:
-                        body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                        body_bytes, stream_response = prepare_hermes_payload(payload, reason)
                         upstream_name = "hermes"
                     else:
                         target_base_url = DEEPSEEK_BASE_URL
@@ -429,7 +548,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             return
 
         if not stream_response:
-            content = response.content
+            content = augment_openai_response(response.content, upstream_name)
             self.send_response(response.status_code)
             for key, value in response.headers.items():
                 if key.lower() in hop_by_hop_headers():

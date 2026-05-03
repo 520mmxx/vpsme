@@ -200,6 +200,17 @@ else
     echo "    回复: $(echo "$HOST_REPLY" | head -c 200)"
 fi
 
+HOST_DISPLAY_PREFIX=$(grep -m1 "^OPDS_HOST_DISPLAY_PREFIX=" .env | cut -d'=' -f2- | sed -E 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^["'"'"']|["'"'"']$//g')
+if [[ -n "$HOST_DISPLAY_PREFIX" ]] && [[ "$HOST_DISPLAY_PREFIX" != "/host" ]]; then
+    if echo "$HOST_REPLY" | grep -Fq "$HOST_DISPLAY_PREFIX/OpenDeepSeek-Outputs/smoke-agent-route.txt"; then
+        ok "Hermes 回复包含用户本机可找路径（不只给 /host 容器路径）"
+    else
+        fail "Hermes 回复没有包含本机路径提示"
+        echo "    期望包含: $HOST_DISPLAY_PREFIX/OpenDeepSeek-Outputs/smoke-agent-route.txt"
+        echo "    回复: $(echo "$HOST_REPLY" | head -c 300)"
+    fi
+fi
+
 echo ""
 echo "════════════════════════════════════════════"
 echo "   测试结果"

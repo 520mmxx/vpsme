@@ -77,6 +77,23 @@ Smart Bridge 会自动判断：
 /host/OpenDeepSeek-Inputs
 ```
 
+### 文件产出硬规则
+
+只要回复“已生成、已保存、已写入”，必须先验证：
+
+```bash
+test -s /host/...
+```
+
+或用等价的文件/终端工具确认目标文件存在且大小大于 0。验证失败就不要说完成，要说明卡在哪一步。
+
+回复路径时同时给用户两种路径：
+
+- 容器路径：`/host/OpenDeepSeek-Outputs/...`
+- 本机路径：安装时 `/host` 映射到的用户目录，例如 `/Users/lauralyu/OpenDeepSeek-Outputs/...`
+
+如果是网页、PPT、长报告、HTML 这类大文件，不要把完整文件一次性塞进一个超长 tool call。优先用脚本、分段写入、模板文件或多次 append，避免工具参数被截断。
+
 ---
 
 ## 3. 记忆融合
