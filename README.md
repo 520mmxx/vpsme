@@ -35,7 +35,7 @@ OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理
 - **多模态出图** — 支持 DALL-E、Stable Diffusion、ComfyUI 工作流
 - **三端使用** — 浏览器 + 桌面 App（Electron）+ 手机 PWA，数据同步
 
-## 架构（v0.3.0 简化版）
+## 架构（v0.4.0 — 三件套真正打通）
 
 ```
 ┌──────────────────────────────┐
@@ -48,27 +48,36 @@ OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理
 │ • 中文 PDF / 知识库 RAG      │
 │ • 联网搜索 / 代码执行         │
 │ • 多模态 / 桌面 App / PWA    │
+│ • 6 个 Hermes Tools 桥接      │
 └──────────────────────────────┘
-              ↓ OpenAI 兼容 API
+              ↓ OpenAI 兼容 API（hermes-agent model）
+┌──────────────────────────────┐
+│ Hermes Agent v0.11 (内核层)   │
+│ • Memory 跨会话记忆           │
+│ • Skills 自学习扩展           │
+│ • Cron 后台定时任务           │
+│ • Subagent 并行执行           │
+│ • 16 IM 平台桥接              │
+│   (provider: deepseek 原生)   │
+└──────────────────────────────┘
+              ↓ DeepSeek API
 ┌──────────────────────────────┐
 │ DeepSeek V4 Flash / Pro       │
-│ api.deepseek.com (云)         │
+│ api.deepseek.com              │
 └──────────────────────────────┘
 ```
 
-**默认两层架构**：Open WebUI 直连 DeepSeek，简单清晰。
+**三层各司其职**：
+- **终端层**（Open WebUI）= 用户体验：网页/PWA/桌面 App / 知识库 / 多模态
+- **内核层**（Hermes）= Agent 大脑：Memory/Skills/Cron/Subagent，用 DeepSeek 当 LLM
+- **模型层**（DeepSeek V4）= 推理引擎：1/9 GPT-4o 价格
 
-### 可选高级层（`docker compose --profile advanced up -d`）
+**用户在 Open WebUI 里直接说话**：
+- "30 分钟后提醒我喝水" → Hermes Cron skill 真创建任务，到时推送
+- "记住我喜欢咖啡" → Hermes Memory 跨会话持久化
+- "同时帮我对比这 5 个" → Hermes Subagent 并行分析
 
-```
-[Hermes Agent v0.11]  ← 用户接钉钉/飞书/企微/QQ Bot 时启用
-   • 后台 Cron 任务推送
-   • Memory 跨会话记忆
-   • Skills 工具扩展
-   • 16 个 IM 平台桥接
-```
-
-> **注意**：Hermes 不原生支持 DeepSeek 作为 LLM provider。启用 advanced profile 需要额外配 OpenRouter / Anthropic / Kimi 等 API key。普通用户用 DeepSeek 直连即可，**不需要 Hermes**。
+✨ **可选**：`docker compose --profile full up -d` 加 SearXNG（联网搜索后端）
 
 ## 5 分钟快速开始
 

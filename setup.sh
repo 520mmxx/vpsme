@@ -300,6 +300,12 @@ done
 
 if [[ "$HERMES_READY" -eq 1 ]]; then
     ok "Hermes 就绪"
+    # 🔧 修复 Hermes config.yaml 默认 model（首次启动后）
+    # Hermes 镜像默认 model 是 anthropic/claude-opus-4.6，但 DeepSeek 只接受 v4-flash/v4-pro
+    if [[ -x "scripts/hermes-fix-model.sh" ]]; then
+        info "应用 Hermes 默认 model 修复（首次启动需要）..."
+        ./scripts/hermes-fix-model.sh "${DEFAULT_MODEL:-deepseek-v4-flash}" || warn "model 修复脚本失败，请手动运行 ./scripts/hermes-fix-model.sh"
+    fi
 else
     warn "Hermes 在 60 秒内未就绪，请稍后手动检查"
 fi

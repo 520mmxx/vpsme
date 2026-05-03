@@ -1,36 +1,37 @@
 # OpenDeepSeek - docker-compose.yml
 # Project: OpenDeepSeek (一键部署本地 Agentic ChatGPT 替代品)
-# Version: v0.3.0 — Open WebUI 直连 DeepSeek（架构简化）
-# Architecture (默认):  Open WebUI ─→ DeepSeek API
-# Architecture (advanced): Open WebUI ─→ DeepSeek API
-#                          Hermes ─→ OpenRouter/其他 LLM（用户接 IM 时启用）
+# Version: v0.4.0 — 三层架构真正打通（Hermes 用 deepseek provider）
+# Architecture (默认): Open WebUI → Hermes Agent → DeepSeek API
+#                       (用户)        (Agent 内核)     (LLM)
+# Hermes Skills 全部活：Memory / Cron / Subagent / 16 IM 桥接 / Skills
 # Usage:
-#   docker compose up -d                          → 默认（Open WebUI + DeepSeek，普通用户）
-#   docker compose --profile advanced up -d        → 含 Hermes（IM 桥接 / Cron / Skills）
+#   docker compose up -d                          → 默认（含 Hermes Agent，普通用户）
 #   docker compose --profile full up -d            → 含 SearXNG 联网搜索
 # Network binding: 默认绑定 127.0.0.1（仅本机），跨网络访问请在 .env 设置 BIND_HOST=0.0.0.0
 
 services:
   # ═══════════════════════════════════════════════════════════════════════
-  # Hermes Agent (可选 — 仅在用户接 IM/Cron/Skills 时启用)
-  # 注意：Hermes 不原生支持 DeepSeek 作为 LLM provider
-  #       启用此 profile 需要额外 OpenRouter / Anthropic / Kimi 等 API key
+  # Hermes Agent v0.11 (Agent 内核 + DeepSeek LLM)
+  # 用 Hermes 原生 deepseek provider —— 通过 DEEPSEEK_API_KEY env 直接接 DeepSeek API
+  # 内核能力：Memory / Skills / Cron / Subagent / 16 IM 桥接
   # ═══════════════════════════════════════════════════════════════════════
   hermes:
     image: nousresearch/hermes-agent:v2026.4.23
     container_name: opendeepseek-hermes
-    profiles:
-      - "advanced"
     command: gateway run
+    # 注：Hermes 镜像首次启动会生成 /opt/data/config.yaml，默认 model = anthropic/claude-opus-4.6
+    # OpenDeepSeek 的 setup.sh 在 healthy 后会自动修复为 deepseek-v4-flash + restart
+    # 见 scripts/hermes-fix-model.sh
     ports:
       - "${BIND_HOST:-127.0.0.1}:8642:8642"
     environment:
-      # Hermes 自己的 LLM provider（OpenRouter 推荐，接 DeepSeek 走 openrouter/deepseek 路由）
-      - "OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}"
-      - HERMES_INFERENCE_PROVIDER=${HERMES_INFERENCE_PROVIDER:-openrouter}
-      - DEFAULT_MODEL=${HERMES_DEFAULT_MODEL:-deepseek/deepseek-chat}
+      # 🔴 关键：用 Hermes 原生 deepseek provider（不是 custom/openrouter）
+      - "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:?Missing required: DEEPSEEK_API_KEY (run ./setup.sh)}"
+      - HERMES_INFERENCE_PROVIDER=deepseek
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-deepseek-chat}
+      # API Server（暴露给 Open WebUI 当 model backend）
       - API_SERVER_ENABLED=true
-      - "API_SERVER_KEY=${HERMES_API_KEY:-hermes-default-key}"
+      - "API_SERVER_KEY=${HERMES_API_KEY:?Missing required: HERMES_API_KEY (run ./setup.sh)}"
       - API_SERVER_PORT=8642
       - API_SERVER_HOST=0.0.0.0
       # ── IM Bridge Integrations (uncomment as needed) ──
@@ -71,7 +72,8 @@ services:
       - opendeepseek-network
 
   # ═══════════════════════════════════════════════════════════════════════
-  # Open WebUI (主服务) — 直连 DeepSeek API
+  # Open WebUI v0.9.2 (用户界面)
+  # 把 Hermes Gateway 当作 OpenAI 兼容的"模型后端"调用
   # ═══════════════════════════════════════════════════════════════════════
   open-webui:
     image: ghcr.io/open-webui/open-webui:0.9.2
@@ -79,9 +81,9 @@ services:
     ports:
       - "${BIND_HOST:-127.0.0.1}:3000:8080"
     environment:
-      # 🔴 直连 DeepSeek（不经过 Hermes — Hermes 不支持 DeepSeek 作为 LLM provider）
-      - OPENAI_API_BASE_URL=https://api.deepseek.com/v1
-      - "OPENAI_API_KEY=${DEEPSEEK_API_KEY:?Missing required: DEEPSEEK_API_KEY (run ./setup.sh)}"
+      # 🔴 关键：把 Hermes 当 OpenAI 兼容模型源（不是直连 DeepSeek）
+      - OPENAI_API_BASE_URL=http://hermes:8642/v1
+      - "OPENAI_API_KEY=${HERMES_API_KEY:?Missing required: HERMES_API_KEY (run ./setup.sh)}"
       - WEBUI_NAME=OpenDeepSeek
       - "WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:?Missing required: WEBUI_SECRET_KEY (run ./setup.sh)}"
       - DEFAULT_LOCALE=zh-CN
@@ -91,22 +93,26 @@ services:
       # WEBUI_AUTH=false 跳过登录（仅适合家庭单机/Tailscale 私有网络）
       # 公网部署务必改为 true 并配反向代理
       - WEBUI_AUTH=${WEBUI_AUTH:-false}
-      # 默认预选模型 ID（DeepSeek 真实模型名，用户能看懂）
-      - DEFAULT_MODELS=${DEFAULT_MODELS_FRONTEND:-deepseek-v4-flash}
-      # 模型选择器置顶
-      - DEFAULT_PINNED_MODELS=deepseek-v4-flash,deepseek-v4-pro
-      # 联网搜索默认启用（配合 SearXNG profile 使用）
+      # 默认预选模型（Hermes 暴露的 model id 是 hermes-agent）
+      - DEFAULT_MODELS=${DEFAULT_MODELS_FRONTEND:-hermes-agent}
+      - DEFAULT_PINNED_MODELS=hermes-agent
+      # 联网搜索（配合 SearXNG profile 使用）
       - ENABLE_RAG_WEB_SEARCH=true
-      # SearXNG 后端（仅 --profile full 启用 SearXNG 时生效）
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
     volumes:
       - open-webui-data:/app/backend/data
+    depends_on:
+      hermes:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - opendeepseek-network
 
+  # ═══════════════════════════════════════════════════════════════════════
+  # SearXNG (可选 — 联网搜索后端)
+  # ═══════════════════════════════════════════════════════════════════════
   searxng:
     image: searxng/searxng:2026.4.28-ed5955a5c
     container_name: opendeepseek-searxng
