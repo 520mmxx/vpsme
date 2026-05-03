@@ -61,6 +61,9 @@ services:
       # - WEBHOOK_PORT=8080
     volumes:
       - hermes-data:/opt/data
+      # 🎭 OpenDeepSeek 自定义 AI persona（自报身份 + 能力清单 + 模型路由建议）
+      # 改这个文件可以重塑 AI 行为；删除可恢复 Hermes 默认 persona
+      - ./hermes/SOUL.md:/opt/data/SOUL.md:ro
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8642/health')\" 2>/dev/null || exit 1"]
       interval: 30s
@@ -101,6 +104,7 @@ services:
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
     volumes:
       - open-webui-data:/app/backend/data
+      - ./webui/custom.css:/app/build/static/custom.css:ro   # OpenDeepSeek 主题 CSS
     depends_on:
       hermes:
         condition: service_healthy
