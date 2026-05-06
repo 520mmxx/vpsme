@@ -20,7 +20,7 @@
 
 ## 3. 报告 Bug
 
-请在 [GitHub Issues](https://github.com/opendeepseek/opendeepseek/issues) 提交 bug 报告。
+请在 [GitHub Issues](https://github.com/mouxue56-debug/opendeepseek/issues) 提交 bug 报告。
 
 **必须包含以下信息：**
 
@@ -63,7 +63,7 @@
 
 ## 4. 提交功能请求
 
-在开 issue 之前，请先在 [GitHub Discussions](https://github.com/opendeepseek/opendeepseek/discussions) 发帖讨论，确认该功能符合项目方向并获得社区反馈。
+在开 issue 之前，请先在 [GitHub Discussions](https://github.com/mouxue56-debug/opendeepseek/discussions) 发帖讨论，确认该功能符合项目方向并获得社区反馈。
 
 功能请求 issue 应包含：
 
