@@ -467,3 +467,90 @@ Next recommended goal:
 ```text
 /goal 执行最终本地收尾：检查 git diff、确认没有 .env/密钥/大文件入库，运行最终 goal-check/release-gate，生成一份 FINAL-HANDOVER.md。不要启动 Docker，不 push，不 merge，不 tag。
 ```
+
+## 2026-05-06 - Creator Final Mile Overnight Run
+
+Status: done
+
+Changed files:
+
+- `CONTRIBUTING.md`
+- `README.md`
+- `docs/INSTALL.md`
+- `docs/PUBLIC-DEPLOYMENT.md`
+- `docs/OPENDEEPSEEK-CN-ROADMAP.md`
+- `docs/zh-CN/00-我应该下载哪个版本.md`
+- `docs/zh-CN/04-国内网络问题.md`
+- `docs/zh-CN/视频拍摄检查清单.md`
+- `docs/zh-CN/新用户安装实测报告.md`
+- `install-cn.sh`
+- `install-cn.ps1`
+- `onboarding/index.html`
+- `release-cn.json`
+- `scripts/check-network-cn.sh`
+- `scripts/creator-demo.sh`
+- `OpenDeepSeek.command`
+- `setup.sh`
+- `bridge/hermes_image_bridge.py`
+
+What changed:
+
+- Replaced remaining `opendeepseek/opendeepseek` placeholders with `mouxue56-debug/opendeepseek`.
+- Added `scripts/creator-demo.sh`, a video-recording preflight that checks git sync, Gitee mirror, Docker stack, DeepSeek, Bridge fast route, Hermes Agent file writes, Cron skill, and Portal.
+- Added a Chinese video shooting checklist.
+- Improved `OpenDeepSeek.command` so macOS users can double-click to start, auto-wait Docker/OrbStack, run setup when `.env` is missing, and otherwise start the lightweight stack.
+- Ran a fresh GitHub clone simulation in `/tmp` and documented timings in `docs/zh-CN/新用户安装实测报告.md`.
+- Fixed startup staleness by rebuilding the local `hermes-bridge` image on `./setup.sh start` / `start-full` / first setup start, so users do not keep running old Bridge code after pulling fixes.
+- Fixed Bridge run-state bookkeeping: `set_run_state(..., status=response.status_code)` no longer conflicts with the run lifecycle state argument.
+
+Validation:
+
+- `bash -n setup.sh install.sh install-cn.sh scripts/*.sh OpenDeepSeek.command`: PASS
+- `docker compose config -q`: PASS
+- `docker compose -f docker-compose.cn.yml config -q`: PASS
+- `python3 -m py_compile bridge/hermes_image_bridge.py`: PASS
+- `python3 scripts/benchmark_routing.py`: PASS - 56/56, F1=1.00
+- `python3 scripts/test-provider-config.py`: PASS
+- `python3 scripts/test-artifact-manifest.py`: PASS
+- `./setup.sh verify`: PASS - 0 errors, 1 warning because SearXNG is intentionally stopped in lightweight mode
+- `./scripts/goal-check.sh`: PASS - 26 passed, 0 failed, 2 skipped (`shellcheck` not installed; full smoke-test disabled in goal-check)
+- `bash scripts/smoke-test.sh`: PASS - 18 passed, 0 failed
+- `./scripts/release-gate.sh --full`: PASS - 28 passed, 0 failed, 0 warnings, 0 skipped
+- Fresh install from GitHub in `/tmp`: PASS - clone 1s, lightweight start 17s, healthy wait 31s, Portal/Open WebUI/Bridge checks passed
+
+Runtime state after validation:
+
+- `opendeepseek-webui`: healthy on `127.0.0.1:3000`
+- `opendeepseek-hermes-bridge`: healthy on `127.0.0.1:8770`
+- `opendeepseek-hermes`: healthy on `127.0.0.1:8642`
+- SearXNG is not running by default to keep memory lower; use `./setup.sh start-full` only when search is needed.
+
+Remaining manual blocker:
+
+- Gitee mirror is still HTTP 404 at `https://gitee.com/mouxue56-debug/opendeepseek`. This requires the maintainer to create/import the mirror while logged into Gitee. Until that exists, `scripts/creator-demo.sh` will intentionally fail its Gitee mirror check.
+
+Backup:
+
+- Original remote `origin/main` was backed up to `backup/origin-main-20260506-232300-300a606` before replacing GitHub main with the Creator Release branch.
+
+Next morning:
+
+```bash
+cd /Users/lauralyu/projects/opendeepseek/.claude/worktrees/stoic-rhodes-f8b694
+./setup.sh start
+open http://localhost:3000
+```
+
+Before recording:
+
+```bash
+./scripts/creator-demo.sh
+```
+
+If it fails only on Gitee, create the Gitee mirror first:
+
+```text
+https://gitee.com/projects/import/url
+source: https://github.com/mouxue56-debug/opendeepseek
+name: opendeepseek
+```
