@@ -250,16 +250,29 @@
       <div class="setup-heading">
         <span class="brand-mark">OD</span>
         <p class="eyebrow">启动配置</p>
-        <h2>填写 DeepSeek API Key</h2>
-        <p>系统会自动写入 .env，并启动 Open WebUI、Smart Bridge、Hermes Agent 和 SearXNG。</p>
+        <h2>选择模型 API</h2>
+        <p>默认推荐 DeepSeek。高级用户也可以接 OpenRouter、本地 Ollama/LM Studio/vLLM、国内兼容平台或自建网关。</p>
       </div>
 
       <div class="error-message" id="errorBox" role="alert">
         <span id="errorText">请填写 API Key</span>
       </div>
 
+      <div class="provider-grid" role="radiogroup" aria-label="Provider 选择">
+        <label class="provider-card selected" for="providerDeepSeek">
+          <input type="radio" name="provider" id="providerDeepSeek" value="deepseek" checked />
+          <span class="provider-title">DeepSeek 官方 API</span>
+          <small>推荐默认，中文效果好，成本低，最适合直接发布给小白。</small>
+        </label>
+        <label class="provider-card" for="providerCustom">
+          <input type="radio" name="provider" id="providerCustom" value="custom" />
+          <span class="provider-title">高级：自定义 API</span>
+          <small>OpenRouter、本地模型、国内 OpenAI-compatible 平台、LiteLLM 或自建网关。</small>
+        </label>
+      </div>
+
       <div class="form-group">
-        <label class="form-label" for="apiKeyInput">DeepSeek API Key</label>
+        <label class="form-label" for="apiKeyInput" id="apiKeyLabel">DeepSeek API Key</label>
         <input
           type="password"
           id="apiKeyInput"
@@ -277,24 +290,34 @@
         </p>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">选择模型</label>
-        <div class="model-options" role="radiogroup" aria-label="模型选择">
-          <div class="model-card">
-            <input type="radio" name="model" id="model-flash" value="deepseek-v4-flash" checked />
-            <label for="model-flash">
-              <span>DeepSeek V4 Flash</span>
-              <small>推荐，低延迟，适合大多数任务</small>
-            </label>
+      <details class="advanced-box" id="advancedProvider">
+        <summary>高级配置：Base URL 和模型名</summary>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="baseUrlInput">API Base URL</label>
+            <input id="baseUrlInput" class="form-input" value="https://api.deepseek.com" spellcheck="false" />
+            <p class="form-hint">可填不带 `/v1` 的地址，Bridge 会自动兼容。远程地址必须是 https。</p>
           </div>
-          <div class="model-card">
-            <input type="radio" name="model" id="model-pro" value="deepseek-v4-pro" />
-            <label for="model-pro">
-              <span>DeepSeek V4 Pro</span>
-              <small>深度任务备用，成本更高</small>
-            </label>
+          <div class="form-group">
+            <label class="form-label" for="modelInput">默认模型</label>
+            <input id="modelInput" class="form-input" value="deepseek-v4-flash" spellcheck="false" />
+            <p class="form-hint">普通问答快路径使用。DeepSeek 推荐 `deepseek-v4-flash`。</p>
           </div>
         </div>
+        <div class="form-group">
+          <label class="form-label" for="proModelInput">深度模型（可选）</label>
+          <input id="proModelInput" class="form-input" value="deepseek-v4-pro" spellcheck="false" />
+          <p class="form-hint">未来 deepwork 模式可用；不填时沿用默认模型。</p>
+        </div>
+      </div>
+
+      <div class="demo-prompts" aria-label="演示任务">
+        <strong>启动后可直接演示</strong>
+        <button type="button" onclick="copyDemoPrompt(0)">普通问答速度</button>
+        <button type="button" onclick="copyDemoPrompt(1)">生成 hello.txt</button>
+        <button type="button" onclick="copyDemoPrompt(2)">做中文网页</button>
+        <button type="button" onclick="copyDemoPrompt(3)">整理桌面方案</button>
+        <button type="button" onclick="copyDemoPrompt(4)">记住偏好</button>
       </div>
 
       <div class="permission-mini" aria-label="默认文件权限说明">
@@ -369,6 +392,32 @@
 <script>
 const POLL_INTERVAL = 2500;
 let pollTimer = null;
+const PROVIDER_PRESETS = {
+  deepseek: {
+    keyLabel: 'DeepSeek API Key',
+    keyPlaceholder: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx',
+    hint: '以 sk- 开头。没有 Key 可以打开 DeepSeek 控制台申请。',
+    base: 'https://api.deepseek.com',
+    model: 'deepseek-v4-flash',
+    pro: 'deepseek-v4-pro',
+  },
+  custom: {
+    keyLabel: '自定义 API Key',
+    keyPlaceholder: '本地 API 可留空；远程 API 请填写 Key',
+    hint: '适合 OpenRouter、本地 Ollama/LM Studio/vLLM、国内 OpenAI-compatible 平台、LiteLLM 或自建网关。',
+    base: 'http://host.docker.internal:11434/v1',
+    model: 'qwen-plus',
+    pro: 'qwen-plus',
+  },
+};
+
+const DEMO_PROMPTS = [
+  '用三句话解释 OpenDeepSeek 是什么，要求中文简洁。',
+  '请在 /host/OpenDeepSeek-Outputs/demo-hello.txt 写入“你好，OpenDeepSeek”，完成后验证文件存在。',
+  '请在 /host/OpenDeepSeek-Outputs/demo-site 里生成一个单文件中文网页 index.html，介绍 OpenDeepSeek：普通问答快、真任务进 Hermes、文件产物可找到。完成后验证文件存在。',
+  '请查看 /host/Desktop，但不要移动或删除任何文件。按文件类型给我一个桌面整理方案，并保存到 /host/OpenDeepSeek-Outputs/desktop-plan.md。',
+  '请记住：我偏好中文、直接、少废话、要真执行不要只解释。以后相关任务请主动参考这个偏好。',
+];
 
 function goStep(n) {
   document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
@@ -397,18 +446,53 @@ function clearError() {
   document.getElementById('apiKeyInput').classList.remove('error');
 }
 
+function selectedProvider() {
+  const input = document.querySelector('input[name="provider"]:checked');
+  return input ? input.value : 'deepseek';
+}
+
+function updateProviderUI() {
+  const provider = selectedProvider();
+  const preset = PROVIDER_PRESETS[provider] || PROVIDER_PRESETS.deepseek;
+  document.querySelectorAll('.provider-card').forEach(card => {
+    const input = card.querySelector('input');
+    card.classList.toggle('selected', Boolean(input && input.checked));
+  });
+  document.getElementById('apiKeyLabel').textContent = preset.keyLabel;
+  document.getElementById('apiKeyInput').placeholder = preset.keyPlaceholder;
+  document.getElementById('apiKeyHint').textContent = preset.hint;
+  document.getElementById('baseUrlInput').value = preset.base;
+  document.getElementById('modelInput').value = preset.model;
+  document.getElementById('proModelInput').value = preset.pro;
+  const details = document.getElementById('advancedProvider');
+  if (details) details.open = provider === 'custom';
+}
+
+function copyDemoPrompt(index) {
+  const text = DEMO_PROMPTS[index] || DEMO_PROMPTS[0];
+  navigator.clipboard?.writeText(text).catch(() => {});
+}
+
 async function handleActivate() {
   clearError();
 
+  const provider = selectedProvider();
   const key = document.getElementById('apiKeyInput').value.trim();
-  const model = document.querySelector('input[name="model"]:checked').value;
+  const base_url = document.getElementById('baseUrlInput').value.trim();
+  const model = document.getElementById('modelInput').value.trim();
+  const pro_model = document.getElementById('proModelInput').value.trim();
 
-  if (!key) {
-    showError('API Key 不能为空，请先粘贴你的 DeepSeek API Key');
+  if (!base_url || !model) {
+    showError('Base URL 和模型名不能为空');
+    return;
+  }
+  const isLocal = base_url.startsWith('http://localhost') || base_url.startsWith('http://127.0.0.1') || base_url.startsWith('http://host.docker.internal');
+  if (!key && !(provider === 'custom' && isLocal)) {
+    showError(provider === 'deepseek' ? 'DeepSeek API Key 不能为空' : '远程自定义 API 需要填写 API Key');
     document.getElementById('apiKeyInput').focus();
     return;
   }
-  if (key.length < 8) {
+  if (key && key.length < 8) {
     showError('API Key 格式不正确，请确认复制完整');
     return;
   }
@@ -421,7 +505,7 @@ async function handleActivate() {
     const resp = await fetch('/api/configure', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deepseek_api_key: key, model }),
+      body: JSON.stringify({ provider, api_key: key, base_url, model, pro_model }),
     });
     const data = await resp.json();
 
@@ -439,6 +523,11 @@ async function handleActivate() {
     btn.textContent = '激活并启动';
   }
 }
+
+document.querySelectorAll('input[name="provider"]').forEach(input => {
+  input.addEventListener('change', updateProviderUI);
+});
+updateProviderUI();
 
 function setRingProgress(pct) {
   const circumference = 226;

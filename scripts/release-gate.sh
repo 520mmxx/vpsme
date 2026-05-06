@@ -178,10 +178,10 @@ check_public_safety() {
 check_image_bridge_safety() {
   if grep -q 'def sanitize_payload' bridge/hermes_image_bridge.py \
     && grep -q 'image_url' bridge/hermes_image_bridge.py \
-    && grep -q 'direct\["model"\] = DEFAULT_MODEL' bridge/hermes_image_bridge.py; then
-    ok "Bridge 保留 image_url 本地解析与 DeepSeek 模型归一化逻辑"
+    && grep -q 'direct\["model"\] = LITE_MODEL' bridge/hermes_image_bridge.py; then
+    ok "Bridge 保留 image_url 本地解析与轻量 Provider 模型归一化逻辑"
   else
-    fail "Bridge 图片/DeepSeek 适配保护缺失"
+    fail "Bridge 图片/Provider 适配保护缺失"
   fi
 
   if grep -q 'headers\["Accept-Encoding"\] = "identity"' bridge/hermes_image_bridge.py; then
@@ -219,6 +219,7 @@ run_required "release-gate 语法" bash -n scripts/release-gate.sh
 run_required "install.sh 语法" bash -n install.sh
 run_required "setup.sh 语法" bash -n setup.sh
 run_required "smoke-test 语法" bash -n scripts/smoke-test.sh
+run_required "provider 配置测试" python3 scripts/test-provider-config.py
 
 check_one_click_docs
 check_default_model

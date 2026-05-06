@@ -1,13 +1,13 @@
 # OpenDeepSeek 文档索引
 
-一键部署的本地 Agentic ChatGPT，DeepSeek V4 内核。
+一键部署的本地 Agentic ChatGPT，默认 DeepSeek V4，也支持自定义 OpenAI-compatible API。
 
 ## 快速开始
 
 ```bash
 git clone https://github.com/mouxue56-debug/opendeepseek.git
 cd opendeepseek
-./setup.sh --web   # 浏览器安装向导：只问 1 个 API Key，其他自动智能默认
+./setup.sh --web   # 浏览器安装向导：默认 DeepSeek；高级可填自定义 API
 ```
 
 完成后浏览器自动打开 http://localhost:3000，**无需注册直接对话**。
@@ -15,13 +15,13 @@ cd opendeepseek
 ## 默认架构（v0.4.2）
 
 ```
-[浏览器/手机/PWA] → [Open WebUI] → [Hermes Smart Bridge] → [DeepSeek V4 轻量问答]
+[浏览器/手机/PWA] → [Open WebUI] → [Hermes Smart Bridge] → [DeepSeek/Custom API 轻量问答]
                                                     │
-                                                    └→ [Hermes Agent] → [DeepSeek V4 真任务]
+                                                    └→ [Hermes Agent] → [DeepSeek/Custom API 真任务]
                                                        └── /host 本机文件 + Memory + Cron + Skills
 ```
 
-Open WebUI 负责好用界面、聊天历史、知识库和上传；Hermes Smart Bridge 负责图片落盘 OCR 与智能路由；Hermes 负责 Agent 工具、文件/终端、长期记忆、定时任务和子代理；DeepSeek V4 负责推理。
+Open WebUI 负责好用界面、聊天历史、知识库和上传；Hermes Smart Bridge 负责图片落盘 OCR 与智能路由；Hermes 负责 Agent 工具、文件/终端、长期记忆、定时任务和子代理；DeepSeek V4 是默认推理，也可替换为自定义 OpenAI-compatible API。
 
 ## 文档导航
 
@@ -39,6 +39,8 @@ Open WebUI 负责好用界面、聊天历史、知识库和上传；Hermes Smart
 - [**视频文案**](VIDEO-SCRIPT.md) — 为什么 OpenDeepSeek 不是聊天框，而是真 Agent
 - [**数据飞轮视频拍摄稿**](VIDEO-DATA-FLYWHEEL.md) — DeepSeek、Agent、API、人和模型后训练的拍摄脚本
 - [**记忆融合方案**](MEMORY-INTEGRATION.md) — Open WebUI 记忆/知识库与 Hermes Memory 如何分工互通
+- [**Provider 配置**](CONFIG-PROVIDERS.md) — DeepSeek 默认 + 自定义 OpenAI-compatible API
+- [**性能与内存建议**](PERFORMANCE-TUNING.md) — 轻量模式、full 模式、资源上限和释放内存
 
 ### 📦 部署 / 运维
 - [项目需求与当前进展](PROJECT-REQUIREMENTS-AND-STATUS.md) — 项目初心、核心需求、已完成验证和下一步
@@ -61,6 +63,7 @@ Open WebUI 负责好用界面、聊天历史、知识库和上传；Hermes Smart
 - [Goal 工作台](GOALS/OPENDEEPSEEK-CN.md) — M0-M6 分阶段落地 OpenDeepSeek CN
 - [Goal 执行 Runbook](GOALS/IMPLEMENT.md) — Codex 执行规则、验证和状态更新格式
 - [Goal 当前状态](GOALS/STATUS.md) — 当前进度、验证结果和下一条推荐目标
+- [Creator Release 需求](GOALS/CREATOR-RELEASE.md) — 少改代码、打磨产品壳的发布目标
 - [Agent E2E Benchmark](BENCHMARK.md) — 10 个新会话 × 3 轮端到端能力验证
 - [多模型协作工作流](MULTI-MODEL-WORKFLOW.md) — Kimi/Qwen/GLM/MiniMax + Codex/Claude 协作模板（可复用）
 - [用 Qwen3.6 review 项目](QWEN-REVIEW.md) — OpenClaw + 阿里云 Coding Plan 合规调用

@@ -20,6 +20,38 @@ if [[ "${1:-}" == "verify" || "${1:-}" == "--verify" ]]; then
     exec python3 scripts/verify_config.py
 fi
 
+if [[ "${1:-}" == "doctor" || "${1:-}" == "--doctor" ]]; then
+    if ! command -v python3 &>/dev/null; then
+        echo "❌ doctor 需要 python3"
+        exit 1
+    fi
+    exec python3 scripts/doctor.py
+fi
+
+if [[ "${1:-}" == "doctor-cn" || "${1:-}" == "--doctor-cn" ]]; then
+    if ! command -v python3 &>/dev/null; then
+        echo "❌ doctor-cn 需要 python3"
+        exit 1
+    fi
+    exec python3 scripts/doctor.py --cn
+fi
+
+if [[ "${1:-}" == "report" || "${1:-}" == "--report" ]]; then
+    if ! command -v python3 &>/dev/null; then
+        echo "❌ report 需要 python3"
+        exit 1
+    fi
+    exec python3 scripts/doctor.py --report
+fi
+
+if [[ "${1:-}" == "fix" || "${1:-}" == "--fix" ]]; then
+    if ! command -v python3 &>/dev/null; then
+        echo "❌ fix 需要 python3"
+        exit 1
+    fi
+    exec python3 scripts/doctor.py --fix
+fi
+
 # Web 模式：启动浏览器 onboarding wizard
 if [[ "$SETUP_MODE" == "web" ]]; then
     if ! command -v python3 &>/dev/null; then
@@ -264,6 +296,22 @@ if [[ -z "$SKIP_CONFIG" ]]; then
 
 # DeepSeek API（必需）
 DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+DEEPSEEK_API_BASE=https://api.deepseek.com
+
+# LLM Provider：Open WebUI 永远连接 Smart Bridge；Bridge/Hermes 决定背后 Provider。
+OPDS_LLM_PROVIDER=deepseek
+OPDS_LLM_BASE_URL=https://api.deepseek.com
+OPDS_LLM_API_KEY=${DEEPSEEK_API_KEY}
+OPDS_LLM_MODEL=${DEFAULT_MODEL}
+OPDS_LLM_PRO_MODEL=deepseek-v4-pro
+OPDS_CUSTOM_LLM_BASE_URL=
+OPDS_CUSTOM_LLM_API_KEY=
+OPDS_CUSTOM_LLM_MODEL=
+OPDS_CUSTOM_LLM_PRO_MODEL=
+HERMES_INFERENCE_PROVIDER=deepseek
+CUSTOM_MODEL_BASE_URL=
+CUSTOM_MODEL_API_KEY=
+CUSTOM_MODEL_NAME=
 
 # 模型选择
 DEFAULT_MODEL=${DEFAULT_MODEL}
@@ -287,13 +335,13 @@ OPDS_REALTIME_SEARCH_MAX_RESULTS=6
 OPDS_DELEGATE_OPENWEBUI_NATIVE_TOOLS=true
 ENABLE_RAG_WEB_SEARCH=${ENABLE_CHINA_MODE}
 HERMES_CPUS=1.5
-HERMES_MEMORY_LIMIT=1536m
+HERMES_MEMORY_LIMIT=1280m
 WEBUI_CPUS=1.0
-WEBUI_MEMORY_LIMIT=1280m
+WEBUI_MEMORY_LIMIT=1024m
 BRIDGE_CPUS=0.5
 BRIDGE_MEMORY_LIMIT=256m
 SEARXNG_CPUS=0.5
-SEARXNG_MEMORY_LIMIT=512m
+SEARXNG_MEMORY_LIMIT=384m
 OPDS_SHARED_MEMORY_PATH=/host/OpenDeepSeek-Memory/profile.md
 OPDS_MEMORY_SNAPSHOT_MAX_CHARS=4000
 OPDS_HOST_DISPLAY_PREFIX=${HERMES_HOST_DIR}

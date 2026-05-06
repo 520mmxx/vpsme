@@ -648,6 +648,69 @@ h3 {
   font-weight: 700;
 }
 
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.provider-card {
+  display: grid;
+  gap: 7px;
+  min-height: 128px;
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.provider-card input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.provider-card.selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.provider-title {
+  font-weight: 800;
+}
+
+.provider-card small {
+  color: var(--subtle);
+  line-height: 1.5;
+}
+
+.advanced-box {
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.advanced-box summary {
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.advanced-box .form-group {
+  margin: 14px 0 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .permission-mini {
   margin-bottom: 14px;
   padding: 14px;
@@ -667,44 +730,34 @@ h3 {
   font-size: 0.86rem;
 }
 
-.model-options {
+.demo-prompts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.model-card {
-  position: relative;
-}
-
-.model-card input {
-  position: absolute;
-  opacity: 0;
-}
-
-.model-card label {
-  display: grid;
-  gap: 4px;
-  min-height: 96px;
+  gap: 8px;
+  margin: 0 0 14px;
   padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.demo-prompts strong {
+  margin-bottom: 2px;
+}
+
+.demo-prompts button {
+  min-height: 34px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
+  background: var(--surface-soft);
+  color: var(--text);
+  font-family: var(--font);
+  font-weight: 700;
   cursor: pointer;
 }
 
-.model-card span {
-  font-weight: 700;
-}
-
-.model-card small {
-  color: var(--subtle);
-  line-height: 1.5;
-}
-
-.model-card input:checked + label {
+.demo-prompts button:hover {
   border-color: var(--brand);
   background: var(--brand-soft);
-  box-shadow: inset 0 0 0 1px var(--brand);
 }
 
 .setup-card .btn {
@@ -907,7 +960,8 @@ h3 {
   .portal-grid,
   .status-grid,
   .flow-split,
-  .model-options,
+  .provider-grid,
+  .form-row,
   .permission-layout,
   .artifact-preview {
     grid-template-columns: 1fr;

@@ -94,6 +94,10 @@ if [[ -f scripts/test-artifact-manifest.py ]]; then
   run_required "artifact manifest offline test" python3 scripts/test-artifact-manifest.py
 fi
 
+if [[ -f scripts/test-provider-config.py ]]; then
+  run_required "provider config offline test" python3 scripts/test-provider-config.py
+fi
+
 if [[ -x setup.sh ]]; then
   run_optional "setup.sh verify" ./setup.sh verify
 else

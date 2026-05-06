@@ -2,6 +2,75 @@
 
 Last updated: 2026-05-06
 
+## 2026-05-06 - Creator Release Provider And Doctor Pass
+
+Status: done
+
+Changed files:
+
+- `AGENTS.md`
+- `README.md`
+- `.env.example`
+- `.env.example.cn`
+- `config/providers.example.json`
+- `docker-compose.yml`
+- `docker-compose.cn.yml`
+- `bridge/hermes_image_bridge.py`
+- `onboarding/index.html`
+- `onboarding/server.py`
+- `onboarding/static/style.css`
+- `setup.sh`
+- `scripts/doctor.py`
+- `scripts/test-provider-config.py`
+- `scripts/debug-rounds.sh`
+- `scripts/verify_config.py`
+- `scripts/goal-check.sh`
+- `scripts/release-gate.sh`
+- `docs/CONFIG-PROVIDERS.md`
+- `docs/PERFORMANCE-TUNING.md`
+- `docs/GOALS/CREATOR-RELEASE.md`
+- `docs/README.md`
+
+Validation:
+
+- `python3 -m py_compile bridge/hermes_image_bridge.py onboarding/server.py scripts/verify_config.py scripts/doctor.py scripts/test-provider-config.py`: PASS
+- `bash -n setup.sh install.sh install-cn.sh scripts/check-network-cn.sh scripts/goal-check.sh scripts/release-gate.sh scripts/debug-rounds.sh`: PASS
+- `python3 -m json.tool config/providers.example.json`: PASS
+- `python3 scripts/test-provider-config.py`: PASS
+- `python3 scripts/benchmark_routing.py`: PASS - 56/56, F1=1.00
+- `docker compose config -q`: PASS
+- `docker compose -f docker-compose.cn.yml config -q`: PASS
+- `./setup.sh verify`: PASS - 0 errors, 4 warnings because Docker/OpenDeepSeek runtime is intentionally stopped
+- `./setup.sh doctor`: PASS - 0 errors, warnings only for stopped services/Docker daemon
+- `./setup.sh report`: PASS - generated a redacted zip with 8 files; test artifact was removed after inspection
+- `scripts/release-gate.sh`: PASS - 27 passed, 0 failed, 0 warnings, 1 skipped
+- `scripts/goal-check.sh`: PASS - 25 passed, 0 failed, 2 skipped
+- `scripts/debug-rounds.sh 10`: PASS - 10/10 rounds
+- `./setup.sh fix`: PASS - non-destructively added Provider variables and created input/output/memory directories
+
+Decisions:
+
+- Creator Release is now written as the near-term product scope: do not fork Open WebUI, do not fork Hermes, keep OpenDeepSeek as product shell and stable glue.
+- Open WebUI remains connected only to Smart Bridge.
+- Default Provider remains DeepSeek V4 Flash.
+- Advanced Provider is `custom` OpenAI-compatible API, covering OpenRouter, local Ollama/LM Studio/vLLM, domestic compatible platforms, LiteLLM, and self-hosted gateways without hardcoding every vendor in the main UX.
+- Bridge lightweight path now uses `OPDS_LLM_PROVIDER`, `OPDS_LLM_BASE_URL`, `OPDS_LLM_API_KEY`, and `OPDS_LLM_MODEL`; Hermes task path is still preserved.
+- Portal now shows DeepSeek by default and hides custom API fields in an advanced section.
+- Resource defaults were lowered moderately for local comfort, but `HERMES_AGENT_MAX_TOKENS=32768` was preserved.
+- `setup.sh doctor/report/fix` are read-only or non-destructive; no volume deletion, no Docker startup, no public exposure mutation.
+
+Remaining risks:
+
+- Full runtime smoke-test was not run because Docker/OrbStack daemon is currently stopped.
+- Some custom providers may not support Tool Calls; docs warn that ordinary chat may work while Hermes Agent tasks may fail.
+- Open WebUI PersistentConfig can keep older settings after first launch; users may still need Admin UI reset/migration tooling.
+
+Next recommended goal:
+
+```text
+/goal 启动 Docker 后执行 full runtime validation：docker compose up -d，scripts/release-gate.sh --full，真实测试 Portal 自定义 Provider 页面、Open WebUI 模型列表、普通问答快路径、Hermes 文件写入、图片/OCR 和产物卡片。不 push、不 merge、不 tag。
+```
+
 ## Current Baseline
 
 Known working core chain:

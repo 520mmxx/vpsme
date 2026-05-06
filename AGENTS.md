@@ -10,6 +10,10 @@ The product goal is:
 
 > Open WebUI as the friendly user surface, Hermes Agent as the real computer/file/memory/cron/tool execution layer, and DeepSeek V4 Flash as the cheap fast reasoning engine.
 
+Creator Release framing:
+
+> OpenDeepSeek is a product shell and stable glue layer around Open WebUI, Hermes, and DeepSeek/custom OpenAI-compatible APIs. Keep code changes small and experience polish high.
+
 The next product line is:
 
 > OpenDeepSeek CN: Chinese-first, China-network-ready, one-click installable, real Agent, polished entry experience.
@@ -34,6 +38,10 @@ bash scripts/smoke-test.sh
 ```
 
 If the local stack is intentionally stopped, explain which checks were skipped and why.
+11. Do not fork Open WebUI or Hermes, and do not build a replacement chat UI or Agent runtime.
+12. Open WebUI should keep connecting only to Smart Bridge; Portal/setup writes Provider config into `.env`, and Bridge/Hermes consume it.
+13. Default Provider is DeepSeek. Advanced users may choose `custom` OpenAI-compatible APIs such as OpenRouter, local Ollama/LM Studio/vLLM, LiteLLM, or domestic compatible platforms.
+14. Do not enable Open WebUI passthrough by default.
 
 ## China Ready Rules
 

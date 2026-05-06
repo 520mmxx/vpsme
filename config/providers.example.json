@@ -1,0 +1,33 @@
+{
+  "active": "deepseek",
+  "providers": {
+    "deepseek": {
+      "label": "DeepSeek 官方 API（推荐）",
+      "type": "openai-compatible",
+      "base_url": "https://api.deepseek.com",
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "default_model": "deepseek-v4-flash",
+      "pro_model": "deepseek-v4-pro",
+      "hermes_provider": "deepseek",
+      "requires_v1_suffix": false,
+      "supports_stream": true,
+      "supports_tools": true,
+      "supports_json": true,
+      "notes": "默认推荐，适合中文、低成本普通问答和 Hermes Agent 工具工作流。"
+    },
+    "custom": {
+      "label": "自定义 OpenAI-compatible API",
+      "type": "openai-compatible",
+      "base_url": "",
+      "api_key_env": "OPDS_CUSTOM_LLM_API_KEY",
+      "default_model": "",
+      "pro_model": "",
+      "hermes_provider": "custom",
+      "requires_v1_suffix": "auto",
+      "supports_stream": "auto",
+      "supports_tools": "unknown",
+      "supports_json": "unknown",
+      "notes": "适合 OpenRouter、本地 Ollama/LM Studio/vLLM、硅基流动、阿里百炼、火山方舟、LiteLLM 或自建网关。远程 API 必须使用 https。"
+    }
+  }
+}

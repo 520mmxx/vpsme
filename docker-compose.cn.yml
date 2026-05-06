@@ -15,8 +15,20 @@ services:
     container_name: opendeepseek-hermes
     command: gateway run
     environment:
-      - "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:?Missing required: DEEPSEEK_API_KEY}"
-      - HERMES_INFERENCE_PROVIDER=deepseek
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_API_BASE=${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      - HERMES_INFERENCE_PROVIDER=${HERMES_INFERENCE_PROVIDER:-deepseek}
+      - OPDS_LLM_PROVIDER=${OPDS_LLM_PROVIDER:-deepseek}
+      - OPDS_LLM_BASE_URL=${OPDS_LLM_BASE_URL:-}
+      - OPDS_LLM_API_KEY=${OPDS_LLM_API_KEY:-}
+      - OPDS_LLM_MODEL=${OPDS_LLM_MODEL:-deepseek-v4-flash}
+      - OPDS_LLM_PRO_MODEL=${OPDS_LLM_PRO_MODEL:-deepseek-v4-pro}
+      - OPDS_CUSTOM_LLM_BASE_URL=${OPDS_CUSTOM_LLM_BASE_URL:-}
+      - OPDS_CUSTOM_LLM_API_KEY=${OPDS_CUSTOM_LLM_API_KEY:-}
+      - OPDS_CUSTOM_LLM_MODEL=${OPDS_CUSTOM_LLM_MODEL:-}
+      - CUSTOM_MODEL_BASE_URL=${CUSTOM_MODEL_BASE_URL:-}
+      - CUSTOM_MODEL_API_KEY=${CUSTOM_MODEL_API_KEY:-}
+      - CUSTOM_MODEL_NAME=${CUSTOM_MODEL_NAME:-}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-deepseek-v4-flash}
       - HERMES_MAX_ITERATIONS=${HERMES_MAX_ITERATIONS:-24}
       - HERMES_API_TIMEOUT=${HERMES_API_TIMEOUT:-300}
@@ -43,7 +55,7 @@ services:
       start_period: 60s
     restart: unless-stopped
     cpus: "${HERMES_CPUS:-1.5}"
-    mem_limit: "${HERMES_MEMORY_LIMIT:-1536m}"
+    mem_limit: "${HERMES_MEMORY_LIMIT:-1280m}"
     pids_limit: 128
     networks:
       - opendeepseek-network
@@ -57,8 +69,19 @@ services:
     environment:
       - HERMES_BASE_URL=http://hermes:8642/v1
       - "HERMES_API_KEY=${HERMES_API_KEY:?Missing required: HERMES_API_KEY}"
-      - "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:?Missing required: DEEPSEEK_API_KEY}"
-      - DEEPSEEK_BASE_URL=${DEEPSEEK_API_BASE:-https://api.deepseek.com}/v1
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_API_BASE=${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      - OPDS_LLM_PROVIDER=${OPDS_LLM_PROVIDER:-deepseek}
+      - OPDS_LLM_BASE_URL=${OPDS_LLM_BASE_URL:-}
+      - OPDS_LLM_API_KEY=${OPDS_LLM_API_KEY:-}
+      - OPDS_LLM_MODEL=${OPDS_LLM_MODEL:-deepseek-v4-flash}
+      - OPDS_LLM_PRO_MODEL=${OPDS_LLM_PRO_MODEL:-deepseek-v4-pro}
+      - OPDS_CUSTOM_LLM_BASE_URL=${OPDS_CUSTOM_LLM_BASE_URL:-}
+      - OPDS_CUSTOM_LLM_API_KEY=${OPDS_CUSTOM_LLM_API_KEY:-}
+      - OPDS_CUSTOM_LLM_MODEL=${OPDS_CUSTOM_LLM_MODEL:-}
+      - CUSTOM_MODEL_BASE_URL=${CUSTOM_MODEL_BASE_URL:-}
+      - CUSTOM_MODEL_API_KEY=${CUSTOM_MODEL_API_KEY:-}
+      - CUSTOM_MODEL_NAME=${CUSTOM_MODEL_NAME:-}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-deepseek-v4-flash}
       - ENABLE_LIGHTWEIGHT_ROUTING=${ENABLE_LIGHTWEIGHT_ROUTING:-true}
       - HERMES_AGENT_MAX_TOKENS=${HERMES_AGENT_MAX_TOKENS:-32768}
@@ -138,7 +161,7 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     cpus: "${WEBUI_CPUS:-1.0}"
-    mem_limit: "${WEBUI_MEMORY_LIMIT:-1280m}"
+    mem_limit: "${WEBUI_MEMORY_LIMIT:-1024m}"
     pids_limit: 160
     networks:
       - opendeepseek-network
@@ -153,7 +176,7 @@ services:
       - ./searxng:/etc/searxng:rw
     restart: unless-stopped
     cpus: "${SEARXNG_CPUS:-0.5}"
-    mem_limit: "${SEARXNG_MEMORY_LIMIT:-512m}"
+    mem_limit: "${SEARXNG_MEMORY_LIMIT:-384m}"
     pids_limit: 96
     networks:
       - opendeepseek-network

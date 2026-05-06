@@ -43,9 +43,9 @@ except ImportError:  # Local route tests do not need OCR dependencies.
 
 HERMES_BASE_URL = os.environ.get("HERMES_BASE_URL", "http://hermes:8642/v1").rstrip("/")
 HERMES_API_KEY = os.environ.get("HERMES_API_KEY", "")
-DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1").rstrip("/")
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-flash")
+LITE_PROVIDER = os.environ.get("OPDS_LLM_PROVIDER") or os.environ.get("HERMES_INFERENCE_PROVIDER") or "deepseek"
+LITE_PROVIDER = LITE_PROVIDER.strip().lower() or "deepseek"
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", os.environ.get("OPDS_LLM_MODEL", "deepseek-v4-flash"))
 HERMES_MODEL_ID = os.environ.get("HERMES_MODEL_ID", "hermes-agent")
 ENABLE_LIGHTWEIGHT_ROUTING = os.environ.get("ENABLE_LIGHTWEIGHT_ROUTING", "true").lower() == "true"
 HOST_ROOT = Path(os.environ.get("IMAGE_BRIDGE_HOST_ROOT", "/host"))
@@ -74,6 +74,92 @@ REALTIME_SEARCH_URL = os.environ.get("OPDS_REALTIME_SEARCH_URL", "http://searxng
 REALTIME_SEARCH_TIMEOUT = float(os.environ.get("OPDS_REALTIME_SEARCH_TIMEOUT", "4"))
 REALTIME_SEARCH_MAX_RESULTS = int(os.environ.get("OPDS_REALTIME_SEARCH_MAX_RESULTS", "6"))
 DELEGATE_OPENWEBUI_NATIVE_TOOLS = os.environ.get("OPDS_DELEGATE_OPENWEBUI_NATIVE_TOOLS", "true").lower() == "true"
+
+
+def ensure_openai_v1_base(url: str) -> str:
+    """Normalize provider base URL for `/chat/completions` proxying."""
+    value = (url or "").strip().rstrip("/")
+    if not value:
+        return ""
+    if value.endswith("/chat/completions"):
+        return value.removesuffix("/chat/completions").rstrip("/")
+    if value.endswith("/v1"):
+        return value
+    if value.endswith("/v1/"):
+        return value.rstrip("/")
+    return f"{value}/v1"
+
+
+def provider_base_url(provider: str) -> str:
+    explicit = os.environ.get("OPDS_LLM_BASE_URL", "").strip()
+    if explicit:
+        return ensure_openai_v1_base(explicit)
+    if provider == "deepseek":
+        return ensure_openai_v1_base(
+            os.environ.get("DEEPSEEK_BASE_URL")
+            or os.environ.get("DEEPSEEK_API_BASE")
+            or "https://api.deepseek.com"
+        )
+    if provider == "openrouter":
+        return ensure_openai_v1_base(os.environ.get("OPENROUTER_BASE_URL") or "https://openrouter.ai/api")
+    return ensure_openai_v1_base(
+        os.environ.get("OPDS_CUSTOM_LLM_BASE_URL")
+        or os.environ.get("CUSTOM_MODEL_BASE_URL")
+        or os.environ.get("OPENAI_BASE_URL")
+        or "http://host.docker.internal:11434/v1"
+    )
+
+
+def provider_api_key(provider: str) -> str:
+    generic = os.environ.get("OPDS_LLM_API_KEY", "").strip()
+    if generic:
+        return generic
+    if provider == "deepseek":
+        return os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if provider == "openrouter":
+        return os.environ.get("OPENROUTER_API_KEY", "").strip()
+    return (
+        os.environ.get("OPDS_CUSTOM_LLM_API_KEY", "").strip()
+        or os.environ.get("CUSTOM_MODEL_API_KEY", "").strip()
+        or os.environ.get("OPENAI_API_KEY", "").strip()
+    )
+
+
+def provider_model(provider: str) -> str:
+    explicit = os.environ.get("OPDS_LLM_MODEL", "").strip()
+    if explicit:
+        return explicit
+    if provider == "deepseek":
+        return DEFAULT_MODEL
+    return (
+        os.environ.get("OPDS_CUSTOM_LLM_MODEL", "").strip()
+        or os.environ.get("CUSTOM_MODEL_NAME", "").strip()
+        or DEFAULT_MODEL
+    )
+
+
+def provider_allows_missing_key(provider: str, base_url: str) -> bool:
+    parsed = urlparse(base_url)
+    host = parsed.hostname or ""
+    return provider in {"custom", "local", "ollama", "lmstudio"} and host in {"localhost", "127.0.0.1", "host.docker.internal"}
+
+
+def lite_path_available() -> bool:
+    if not LITE_BASE_URL or not LITE_MODEL:
+        return False
+    if LITE_API_KEY:
+        return True
+    return provider_allows_missing_key(LITE_PROVIDER, LITE_BASE_URL)
+
+
+LITE_BASE_URL = provider_base_url(LITE_PROVIDER)
+LITE_API_KEY = provider_api_key(LITE_PROVIDER)
+LITE_MODEL = provider_model(LITE_PROVIDER)
+# Backward-compatible names used by older tests/docs.
+DEEPSEEK_BASE_URL = ensure_openai_v1_base(
+    os.environ.get("DEEPSEEK_BASE_URL") or os.environ.get("DEEPSEEK_API_BASE") or "https://api.deepseek.com"
+)
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 
 VIRTUAL_MODELS: dict[str, dict[str, str]] = {
     "opendeepseek-auto": {
@@ -203,12 +289,12 @@ def model_list_payload() -> dict[str, Any]:
         "description": "兼容旧配置；新用户建议使用 opendeepseek-auto。",
     })
     data.append({
-        "id": DEFAULT_MODEL,
+        "id": LITE_MODEL,
         "object": "model",
         "created": now,
-        "owned_by": "deepseek",
-        "name": "DeepSeek V4 Flash",
-        "description": "底层 DeepSeek 轻量模型兼容入口。",
+        "owned_by": f"opendeepseek-{LITE_PROVIDER}",
+        "name": f"轻量 Provider：{LITE_MODEL}",
+        "description": "底层轻量问答模型兼容入口；默认是 DeepSeek V4 Flash，也可由 Portal 切到自定义 OpenAI-compatible API。",
     })
     return {"object": "list", "data": data}
 
@@ -425,11 +511,13 @@ def recent_user_text(messages: list[Any], limit: int = 4) -> str:
 
 
 def should_route_to_hermes(payload: dict[str, Any], image_count: int) -> tuple[bool, str]:
-    """Route simple chat to DeepSeek directly, true automation to Hermes Agent."""
+    """Route simple chat to the lightweight provider, true automation to Hermes Agent."""
     if not ENABLE_LIGHTWEIGHT_ROUTING:
         return True, "routing-disabled"
-    if not DEEPSEEK_API_KEY:
-        return True, "missing-deepseek-key"
+    if not lite_path_available():
+        if LITE_PROVIDER == "deepseek" and not LITE_API_KEY:
+            return True, "missing-deepseek-key"
+        return True, "missing-lite-provider"
     if image_count:
         return True, "image:attachment"
     messages = payload.get("messages")
@@ -488,14 +576,14 @@ def route_prompt_for_testing(
         payload["tools"] = [{"type": "function", "function": {"name": "dummy", "parameters": {}}}]
 
     original_lightweight = ENABLE_LIGHTWEIGHT_ROUTING
-    original_deepseek_key = DEEPSEEK_API_KEY
+    original_lite_key = LITE_API_KEY
     globals()["ENABLE_LIGHTWEIGHT_ROUTING"] = lightweight
-    globals()["DEEPSEEK_API_KEY"] = "test-key" if has_deepseek_key else ""
+    globals()["LITE_API_KEY"] = "test-key" if has_deepseek_key else ""
     try:
         route_hermes, reason = route_for_model(payload, image_count, model)
     finally:
         globals()["ENABLE_LIGHTWEIGHT_ROUTING"] = original_lightweight
-        globals()["DEEPSEEK_API_KEY"] = original_deepseek_key
+        globals()["LITE_API_KEY"] = original_lite_key
     return {"route": "hermes" if route_hermes else "deepseek-lite", "reason": reason}
 
 
@@ -576,7 +664,7 @@ def read_shared_memory_snapshot() -> str:
 
 def lite_system_message() -> dict[str, str]:
     parts = [
-        "你是 OpenDeepSeek 的轻量问答路径：Open WebUI → Smart Bridge → DeepSeek V4 Flash。",
+        f"你是 OpenDeepSeek 的轻量问答路径：Open WebUI → Smart Bridge → {LITE_MODEL}。",
         "普通解释、翻译、闲聊、写作可以直接回答，默认中文、简洁、不要啰嗦。",
         "不要声称已经操作电脑、创建文件、设置提醒、读取桌面、写入记忆或调用工具。",
         "如果用户需要本机文件、/host、桌面、生成网页/PPT/文件、定时提醒、长期记忆、图片/OCR、终端、工具或自动化，请提醒：这类请求应走 Hermes Agent；可以直接说出执行任务，或在消息开头加 /agent 强制进入 Hermes。",
@@ -589,8 +677,9 @@ def lite_system_message() -> dict[str, str]:
 
 def prepare_deepseek_payload(payload: dict[str, Any], preserve_tools: bool = False) -> bytes:
     direct = dict(payload)
-    direct["model"] = DEFAULT_MODEL
-    direct.setdefault("thinking", {"type": "disabled"})
+    direct["model"] = LITE_MODEL
+    if LITE_PROVIDER == "deepseek" or LITE_MODEL.startswith("deepseek-"):
+        direct.setdefault("thinking", {"type": "disabled"})
     messages = direct.get("messages")
     if isinstance(messages, list):
         direct["messages"] = [lite_system_message(), *messages]
@@ -895,7 +984,7 @@ def human_route_reason(reason: str) -> str:
 
 
 def friendly_upstream_error(upstream_name: str, error: str, status_code: int | None = None) -> str:
-    layer = "Hermes Agent" if upstream_name == "hermes" else "DeepSeek 轻量问答"
+    layer = "Hermes Agent" if upstream_name == "hermes" else f"{LITE_PROVIDER} 轻量问答"
     status = f"HTTP {status_code}" if status_code else "连接错误"
     hints = [
         "确认 Docker 服务还在运行：`docker compose ps`。",
@@ -904,7 +993,7 @@ def friendly_upstream_error(upstream_name: str, error: str, status_code: int | N
     if upstream_name == "hermes":
         hints.append("如果是网页/PPT/长文件任务，不要降低 `HERMES_AGENT_MAX_TOKENS=32768`。")
     else:
-        hints.append("如果是 API Key、余额或网络问题，请检查 DeepSeek 控制台和 `.env`。")
+        hints.append("如果是 API Key、余额、Base URL 或模型名问题，请检查 Portal 的 Provider 设置和 `.env`。")
     return (
         f"任务没有完成，卡在 {layer} 层（{status}）。\n\n"
         f"错误摘要：{error[:1200]}\n\n"
@@ -1311,14 +1400,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         )
                         upstream_name = "hermes"
                     else:
-                        target_base_url = DEEPSEEK_BASE_URL
+                        target_base_url = LITE_BASE_URL
                         target_url = urljoin(target_base_url + "/", self.path.lstrip("/").removeprefix("v1/"))
-                        if DEEPSEEK_API_KEY:
-                            headers["Authorization"] = f"Bearer {DEEPSEEK_API_KEY}"
+                        if LITE_API_KEY and LITE_API_KEY.lower() not in {"local", "none", "dummy"}:
+                            headers["Authorization"] = f"Bearer {LITE_API_KEY}"
+                        else:
+                            headers.pop("Authorization", None)
                         preserve_native_tools = reason == "openwebui-native-tools"
                         body_bytes = prepare_deepseek_payload(payload, preserve_tools=preserve_native_tools)
                         stream_response = client_requested_stream
-                        upstream_name = "deepseek-lite"
+                        upstream_name = f"{LITE_PROVIDER}-lite"
                     log(f"route {self.path} -> {upstream_name} ({reason}) stream={stream_response} progress={progress_stream}")
                     log_event(
                         "route_decision",
@@ -1462,10 +1553,11 @@ def main() -> None:
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     ARTIFACT_INDEX_DIR.mkdir(parents=True, exist_ok=True)
-    routing = "on" if ENABLE_LIGHTWEIGHT_ROUTING and DEEPSEEK_API_KEY else "off"
+    routing = "on" if ENABLE_LIGHTWEIGHT_ROUTING and lite_path_available() else "off"
     log(
         f"listening on {LISTEN_HOST}:{LISTEN_PORT}; hermes={HERMES_BASE_URL}; "
-        f"deepseek={DEEPSEEK_BASE_URL}; lite-routing={routing}; upload_root={UPLOAD_ROOT}; "
+        f"provider={LITE_PROVIDER}; lite={LITE_BASE_URL}; model={LITE_MODEL}; "
+        f"lite-routing={routing}; upload_root={UPLOAD_ROOT}; "
         f"artifact_root={OUTPUT_ROOT}; artifact_base={ARTIFACT_PUBLIC_BASE_URL}"
     )
     server = ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), BridgeHandler)

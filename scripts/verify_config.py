@@ -25,7 +25,7 @@ def read_env() -> dict[str, str]:
             continue
         key, value = line.split("=", 1)
         values[key.strip()] = value.strip().strip("\"'")
-    values.update({k: v for k, v in os.environ.items() if k.startswith(("OPDS_", "HERMES_", "WEBUI_", "DEFAULT_", "DEEPSEEK_"))})
+    values.update({k: v for k, v in os.environ.items() if k.startswith(("OPDS_", "HERMES_", "WEBUI_", "DEFAULT_", "DEEPSEEK_", "CUSTOM_MODEL_"))})
     return values
 
 
@@ -74,19 +74,52 @@ def main() -> int:
     else:
         r.fail(".env missing. Run ./setup.sh --web or copy .env.example.")
 
-    key = env.get("DEEPSEEK_API_KEY", "")
-    if key and key != "your-deepseek-api-key-here":
-        r.ok("DEEPSEEK_API_KEY is set")
+    provider = env.get("OPDS_LLM_PROVIDER", "deepseek").strip().lower() or "deepseek"
+    base_url = env.get("OPDS_LLM_BASE_URL") or env.get("DEEPSEEK_API_BASE", "https://api.deepseek.com")
+    provider_key = env.get("OPDS_LLM_API_KEY") or env.get("DEEPSEEK_API_KEY", "")
+    if provider == "deepseek":
+        key = env.get("DEEPSEEK_API_KEY") or provider_key
+        if key and key != "your-deepseek-api-key-here":
+            r.ok("DeepSeek provider key is set")
+        else:
+            r.fail("DeepSeek provider selected but API key is missing or still placeholder")
+        if "api.deepseek.com" in base_url:
+            r.ok(f"DeepSeek base URL={base_url}")
+        else:
+            r.warn(f"DeepSeek provider uses non-default base URL={base_url}")
+    elif provider == "custom":
+        if base_url:
+            r.ok(f"custom provider base URL={base_url}")
+        else:
+            r.fail("custom provider selected but OPDS_LLM_BASE_URL is missing")
+        is_local = base_url.startswith(("http://localhost", "http://127.0.0.1", "http://host.docker.internal"))
+        if provider_key and provider_key not in {"your-deepseek-api-key-here", "local"}:
+            r.ok("custom provider key is set")
+        elif is_local:
+            r.ok("custom local provider may omit API key")
+        else:
+            r.fail("custom remote provider requires OPDS_LLM_API_KEY")
     else:
-        r.fail("DEEPSEEK_API_KEY is missing or still placeholder")
+        r.fail(f"Unsupported OPDS_LLM_PROVIDER={provider}; use deepseek or custom")
 
-    model = env.get("DEFAULT_MODEL", "deepseek-v4-flash")
-    if model in {"deepseek-v4-flash", "deepseek-v4-pro"}:
-        r.ok(f"DEFAULT_MODEL={model}")
-    elif model in {"deepseek-chat", "deepseek-reasoner"}:
+    model = env.get("OPDS_LLM_MODEL") or env.get("DEFAULT_MODEL", "deepseek-v4-flash")
+    if provider == "deepseek" and model in {"deepseek-v4-flash", "deepseek-v4-pro"}:
+        r.ok(f"OPDS_LLM_MODEL={model}")
+    elif provider == "deepseek" and model in {"deepseek-chat", "deepseek-reasoner"}:
         r.warn(f"{model} is a legacy compatibility alias; prefer deepseek-v4-flash/pro.")
+    elif provider == "deepseek":
+        r.fail(f"Unsupported DeepSeek model={model}")
+    elif model:
+        r.ok(f"custom provider model={model}")
     else:
-        r.fail(f"Unsupported DEFAULT_MODEL={model}")
+        r.fail("custom provider model is missing")
+
+    hermes_provider = env.get("HERMES_INFERENCE_PROVIDER", provider)
+    expected_hermes_provider = "deepseek" if provider == "deepseek" else "custom"
+    if hermes_provider == expected_hermes_provider:
+        r.ok(f"HERMES_INFERENCE_PROVIDER={hermes_provider}")
+    else:
+        r.warn(f"HERMES_INFERENCE_PROVIDER={hermes_provider}; expected {expected_hermes_provider} for OPDS_LLM_PROVIDER={provider}")
 
     try:
         max_tokens = int(env.get("HERMES_AGENT_MAX_TOKENS", "32768"))

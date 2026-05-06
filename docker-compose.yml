@@ -1,8 +1,8 @@
 # OpenDeepSeek - docker-compose.yml
 # Project: OpenDeepSeek (一键部署本地 Agentic ChatGPT 替代品)
 # Version: v0.4.2 — 智能路由 + Hermes Agent 真打通
-# Architecture (默认): Open WebUI → Smart Bridge → DeepSeek API（普通问答）
-#                                   └→ Hermes Agent → DeepSeek API（真任务）
+# Architecture (默认): Open WebUI → Smart Bridge → DeepSeek/Custom API（普通问答）
+#                                   └→ Hermes Agent → DeepSeek/Custom API（真任务）
 # Hermes Skills 全部活：Memory / Cron / Subagent / 16 IM 桥接 / Skills
 # Usage:
 #   docker compose up -d                          → 默认（含 Hermes Agent，普通用户）
@@ -11,8 +11,8 @@
 
 services:
   # ═══════════════════════════════════════════════════════════════════════
-  # Hermes Agent v0.11 (Agent 内核 + DeepSeek LLM)
-  # 用 Hermes 原生 deepseek provider —— 通过 DEEPSEEK_API_KEY env 直接接 DeepSeek API
+  # Hermes Agent v0.11 (Agent 内核 + LLM Provider)
+  # 默认用 DeepSeek；高级用户可在 Portal/.env 切 custom OpenAI-compatible API。
   # 内核能力：Memory / Skills / Cron / Subagent / 16 IM 桥接
   # ═══════════════════════════════════════════════════════════════════════
   hermes:
@@ -25,9 +25,21 @@ services:
     ports:
       - "${BIND_HOST:-127.0.0.1}:8642:8642"
     environment:
-      # 🔴 关键：用 Hermes 原生 deepseek provider（不是 custom/openrouter）
-      - "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:?Missing required: DEEPSEEK_API_KEY (run ./setup.sh)}"
-      - HERMES_INFERENCE_PROVIDER=deepseek
+      # 🔴 关键：默认 deepseek；高级自定义 API 走 custom provider。
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_API_BASE=${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      - HERMES_INFERENCE_PROVIDER=${HERMES_INFERENCE_PROVIDER:-deepseek}
+      - OPDS_LLM_PROVIDER=${OPDS_LLM_PROVIDER:-deepseek}
+      - OPDS_LLM_BASE_URL=${OPDS_LLM_BASE_URL:-}
+      - OPDS_LLM_API_KEY=${OPDS_LLM_API_KEY:-}
+      - OPDS_LLM_MODEL=${OPDS_LLM_MODEL:-deepseek-v4-flash}
+      - OPDS_LLM_PRO_MODEL=${OPDS_LLM_PRO_MODEL:-deepseek-v4-pro}
+      - OPDS_CUSTOM_LLM_BASE_URL=${OPDS_CUSTOM_LLM_BASE_URL:-}
+      - OPDS_CUSTOM_LLM_API_KEY=${OPDS_CUSTOM_LLM_API_KEY:-}
+      - OPDS_CUSTOM_LLM_MODEL=${OPDS_CUSTOM_LLM_MODEL:-}
+      - CUSTOM_MODEL_BASE_URL=${CUSTOM_MODEL_BASE_URL:-}
+      - CUSTOM_MODEL_API_KEY=${CUSTOM_MODEL_API_KEY:-}
+      - CUSTOM_MODEL_NAME=${CUSTOM_MODEL_NAME:-}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-deepseek-v4-flash}
       # 防止 Agent 被模型带入长循环：API Server 默认 90 轮太重，小白本机默认收敛到 24 轮。
       - HERMES_MAX_ITERATIONS=${HERMES_MAX_ITERATIONS:-24}
@@ -87,7 +99,7 @@ services:
       start_period: 60s
     restart: unless-stopped
     cpus: "${HERMES_CPUS:-1.5}"
-    mem_limit: "${HERMES_MEMORY_LIMIT:-1536m}"
+    mem_limit: "${HERMES_MEMORY_LIMIT:-1280m}"
     pids_limit: 128
     networks:
       - opendeepseek-network
@@ -109,7 +121,19 @@ services:
     environment:
       - HERMES_BASE_URL=http://hermes:8642/v1
       - "HERMES_API_KEY=${HERMES_API_KEY:?Missing required: HERMES_API_KEY (run ./setup.sh)}"
-      - "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:?Missing required: DEEPSEEK_API_KEY (run ./setup.sh)}"
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_API_BASE=${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      - OPDS_LLM_PROVIDER=${OPDS_LLM_PROVIDER:-deepseek}
+      - OPDS_LLM_BASE_URL=${OPDS_LLM_BASE_URL:-}
+      - OPDS_LLM_API_KEY=${OPDS_LLM_API_KEY:-}
+      - OPDS_LLM_MODEL=${OPDS_LLM_MODEL:-deepseek-v4-flash}
+      - OPDS_LLM_PRO_MODEL=${OPDS_LLM_PRO_MODEL:-deepseek-v4-pro}
+      - OPDS_CUSTOM_LLM_BASE_URL=${OPDS_CUSTOM_LLM_BASE_URL:-}
+      - OPDS_CUSTOM_LLM_API_KEY=${OPDS_CUSTOM_LLM_API_KEY:-}
+      - OPDS_CUSTOM_LLM_MODEL=${OPDS_CUSTOM_LLM_MODEL:-}
+      - CUSTOM_MODEL_BASE_URL=${CUSTOM_MODEL_BASE_URL:-}
+      - CUSTOM_MODEL_API_KEY=${CUSTOM_MODEL_API_KEY:-}
+      - CUSTOM_MODEL_NAME=${CUSTOM_MODEL_NAME:-}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-deepseek-v4-flash}
       - ENABLE_LIGHTWEIGHT_ROUTING=${ENABLE_LIGHTWEIGHT_ROUTING:-true}
       - HERMES_AGENT_MAX_TOKENS=${HERMES_AGENT_MAX_TOKENS:-32768}
@@ -201,7 +225,7 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     cpus: "${WEBUI_CPUS:-1.0}"
-    mem_limit: "${WEBUI_MEMORY_LIMIT:-1280m}"
+    mem_limit: "${WEBUI_MEMORY_LIMIT:-1024m}"
     pids_limit: 160
     networks:
       - opendeepseek-network
@@ -223,7 +247,7 @@ services:
       - ./searxng:/etc/searxng:rw
     restart: unless-stopped
     cpus: "${SEARXNG_CPUS:-0.5}"
-    mem_limit: "${SEARXNG_MEMORY_LIMIT:-512m}"
+    mem_limit: "${SEARXNG_MEMORY_LIMIT:-384m}"
     pids_limit: 96
     networks:
       - opendeepseek-network

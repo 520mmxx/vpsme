@@ -1,6 +1,6 @@
 # OpenDeepSeek 🚀
 
-> 一键部署的本地 Agentic ChatGPT — DeepSeek V4 内核，中文优先，开箱即用
+> 一键部署的本地 Agentic ChatGPT — 默认 DeepSeek V4，支持自定义 OpenAI-compatible API，中文优先，开箱即用
 
 ## ⚡ 30 秒一键部署
 
@@ -22,6 +22,8 @@ bash -c "$(curl -fsSL https://gitee.com/opendeepseek/opendeepseek/raw/main/insta
 
 当前本地产品化进度：M0-M5 已落地，包含 release gate、中国版安装骨架、国内镜像/离线包脚本、中文 Portal、Artifact Manifest、四个 OpenDeepSeek 产品模式。云端发布动作仍需要维护者手动提供账号权限并确认。
 
+Provider 选择：小白默认填 DeepSeek API Key；高级用户可在 Portal 里切到自定义 OpenAI-compatible API（OpenRouter、本地 Ollama/LM Studio/vLLM、国内兼容平台、LiteLLM、自建网关等）。Open WebUI 仍然只连接 Smart Bridge，不需要用户手动进后台改 Connections。
+
 → 详细各平台一键命令见 [docs/ONE-CLICK.md](docs/ONE-CLICK.md)
 
 > **⚠️ 安全提醒**：默认家庭模式下端口绑定到 `127.0.0.1`（仅本机访问）。如需在云服务器 / 公网部署，必须：
@@ -35,7 +37,7 @@ bash -c "$(curl -fsSL https://gitee.com/opendeepseek/opendeepseek/raw/main/insta
 
 ## 这是什么
 
-OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理解成自己服务器上跑的 ChatGPT，但 Agent 能力是真实的（不是角色扮演）。它基于 DeepSeek V4 系列模型（价格是 GPT-4o 的 1/9），提供完整的中文体验，支持知识库、多模态、IM 桥接和后台任务调度。不需要写代码，不需要配环境，5 分钟就能跑起来。
+OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理解成自己服务器上跑的 ChatGPT，但 Agent 能力是真实的（不是角色扮演）。它默认基于 DeepSeek V4 系列模型，提供完整中文体验，也允许高级用户接入自定义 OpenAI-compatible API。支持知识库、多模态、IM 桥接和后台任务调度。不需要写代码，不需要配环境，5 分钟就能跑起来。
 
 ## 它能做什么
 
@@ -69,14 +71,14 @@ OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理
 │ • 图片落盘到 /host            │
 │ • 中文/英文 OCR               │
 │ • image_url → 文本路径摘要     │
-│ • 普通问答直连 DeepSeek        │
+│ • 普通问答直连 DeepSeek/Custom │
 │ • 真任务自动转 Hermes Agent    │
 └──────────────────────────────┘
        ↓ 普通问答             ↓ 文件/提醒/记忆/图片/工具
 ┌──────────────────────────────┐
-│ DeepSeek V4 Flash             │
+│ DeepSeek / Custom API          │
 │ • 轻量聊天低延迟              │
-│ • thinking 默认关闭           │
+│ • 默认 DeepSeek thinking 关闭  │
 └──────────────────────────────┘
                               ↓
 ┌──────────────────────────────┐
@@ -86,12 +88,12 @@ OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理
 │ • Cron 后台定时任务           │
 │ • Subagent 并行执行           │
 │ • 16 IM 平台桥接              │
-│   (provider: deepseek 原生)   │
+│   (provider: deepseek/custom)  │
 └──────────────────────────────┘
-              ↓ DeepSeek API
+              ↓ LLM Provider
 ┌──────────────────────────────┐
-│ DeepSeek V4 Flash / Pro       │
-│ api.deepseek.com              │
+│ DeepSeek V4 Flash / Pro        │
+│ 或自定义 OpenAI-compatible API │
 └──────────────────────────────┘
 ```
 
@@ -102,7 +104,7 @@ OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理
 - **模型层**（DeepSeek V4）= 推理引擎：1/9 GPT-4o 价格
 
 **用户在 Open WebUI 里直接说话**：
-- "你好，解释一下..." → Smart Bridge 直连 DeepSeek，少 token、快响应、支持流式
+- "你好，解释一下..." → Smart Bridge 直连轻量 Provider，少 token、快响应、支持流式
 - "30 分钟后提醒我喝水" → Hermes Cron skill 真创建任务，到时推送
 - "记住我喜欢咖啡" → Hermes Memory 跨会话持久化
 - "看看 /host/Desktop 有什么，帮我整理方案" → Hermes file/terminal 工具真检查本机文件
@@ -130,11 +132,14 @@ macOS 用户也可以直接双击 `OpenDeepSeek.command`，它会自动打开浏
 
 ```bash
 ./setup.sh verify
+./setup.sh doctor
+./setup.sh report
+./setup.sh fix   # 只做非破坏性修复：补变量、建目录，不删数据
 python3 scripts/benchmark_routing.py
 bash scripts/smoke-test.sh
 ```
 
-`verify` 只读检查 `.env`、Docker Compose、端口、`/host` 映射和高输出预算；`benchmark_routing.py` 离线验证普通问答不会误进 Hermes、真任务不会误走普通聊天。
+`verify` 只读检查 `.env`、Docker Compose、端口、`/host` 映射和高输出预算；`doctor` 做一键诊断；`report` 生成脱敏诊断包；`benchmark_routing.py` 离线验证普通问答不会误进 Hermes、真任务不会误走普通聊天。
 
 ### 高级版（懂技术的用户）
 

@@ -49,7 +49,60 @@ def _set_state(phase: str, message: str = "", error: str = ""):
         _startup_state["error"] = error
 
 
-def _write_env(deepseek_api_key: str, model: str):
+def _normalize_base_url(url: str) -> str:
+    value = (url or "").strip().rstrip("/")
+    if not value:
+        return ""
+    if value.endswith("/chat/completions"):
+        value = value.removesuffix("/chat/completions").rstrip("/")
+    return value.removesuffix("/v1").rstrip("/") if value.endswith("/v1") else value
+
+
+def _provider_config(data: dict[str, str]) -> dict[str, str]:
+    provider = (data.get("provider") or "deepseek").strip().lower()
+    if provider not in {"deepseek", "custom"}:
+        provider = "custom"
+
+    model = (data.get("model") or "").strip()
+    base_url = _normalize_base_url(data.get("base_url") or "")
+    api_key = (data.get("api_key") or data.get("deepseek_api_key") or "").strip()
+    pro_model = (data.get("pro_model") or "").strip()
+
+    if provider == "deepseek":
+        model = _normalize_model(model or "deepseek-v4-flash")
+        pro_model = pro_model or "deepseek-v4-pro"
+        base_url = base_url or "https://api.deepseek.com"
+        if not api_key:
+            raise ValueError("DeepSeek API Key 不能为空")
+        if len(api_key) < 8:
+            raise ValueError("API Key 格式不正确（太短）")
+        return {
+            "provider": "deepseek",
+            "hermes_provider": "deepseek",
+            "api_key": api_key,
+            "base_url": base_url,
+            "model": model,
+            "pro_model": pro_model,
+        }
+
+    model = model or "qwen-plus"
+    pro_model = pro_model or model
+    base_url = base_url or "http://host.docker.internal:11434/v1"
+    if not base_url.startswith(("https://", "http://localhost", "http://127.0.0.1", "http://host.docker.internal")):
+        raise ValueError("自定义 API Base URL 只允许 https:// 或本机 localhost/127.0.0.1/host.docker.internal")
+    if not api_key and not base_url.startswith(("http://localhost", "http://127.0.0.1", "http://host.docker.internal")):
+        raise ValueError("自定义远程 API 需要填写 API Key；本地 API 可以留空")
+    return {
+        "provider": "custom",
+        "hermes_provider": "custom",
+        "api_key": api_key or "local",
+        "base_url": base_url,
+        "model": model,
+        "pro_model": pro_model,
+    }
+
+
+def _write_env(provider: dict[str, str]):
     """写入 .env 文件（覆盖已有内容中的相关行，保留其余内容）"""
     existing: dict[str, str] = {}
     original_lines: list[str] = []
@@ -62,8 +115,15 @@ def _write_env(deepseek_api_key: str, model: str):
                 k, _, v = stripped.partition("=")
                 existing[k.strip()] = v.strip()
 
-    # 注入/覆盖关键 key
-    existing["DEEPSEEK_API_KEY"] = deepseek_api_key
+    # 注入/覆盖关键 provider 配置。
+    provider_name = provider["provider"]
+    api_key = provider["api_key"]
+    base_url = provider["base_url"]
+    model = provider["model"]
+    pro_model = provider["pro_model"]
+    if provider_name == "deepseek":
+        existing["DEEPSEEK_API_KEY"] = api_key
+        existing["DEEPSEEK_API_BASE"] = base_url
     existing["DEFAULT_MODEL"] = model
     # 只在不存在时生成随机密钥（幂等）
     if not existing.get("HERMES_API_KEY"):
@@ -74,7 +134,21 @@ def _write_env(deepseek_api_key: str, model: str):
         existing["HERMES_HOST_DIR"] = str(pathlib.Path.home())
 
     updates = {
-        "DEEPSEEK_API_KEY": existing["DEEPSEEK_API_KEY"],
+        "DEEPSEEK_API_KEY": existing.get("DEEPSEEK_API_KEY", ""),
+        "DEEPSEEK_API_BASE": existing.get("DEEPSEEK_API_BASE", "https://api.deepseek.com"),
+        "OPDS_LLM_PROVIDER": provider_name,
+        "OPDS_LLM_BASE_URL": base_url,
+        "OPDS_LLM_API_KEY": api_key,
+        "OPDS_LLM_MODEL": model,
+        "OPDS_LLM_PRO_MODEL": pro_model,
+        "OPDS_CUSTOM_LLM_BASE_URL": base_url if provider_name == "custom" else existing.get("OPDS_CUSTOM_LLM_BASE_URL", ""),
+        "OPDS_CUSTOM_LLM_API_KEY": api_key if provider_name == "custom" else existing.get("OPDS_CUSTOM_LLM_API_KEY", ""),
+        "OPDS_CUSTOM_LLM_MODEL": model if provider_name == "custom" else existing.get("OPDS_CUSTOM_LLM_MODEL", ""),
+        "OPDS_CUSTOM_LLM_PRO_MODEL": pro_model if provider_name == "custom" else existing.get("OPDS_CUSTOM_LLM_PRO_MODEL", ""),
+        "HERMES_INFERENCE_PROVIDER": provider["hermes_provider"],
+        "CUSTOM_MODEL_BASE_URL": base_url if provider_name == "custom" else existing.get("CUSTOM_MODEL_BASE_URL", ""),
+        "CUSTOM_MODEL_API_KEY": api_key if provider_name == "custom" else existing.get("CUSTOM_MODEL_API_KEY", ""),
+        "CUSTOM_MODEL_NAME": model if provider_name == "custom" else existing.get("CUSTOM_MODEL_NAME", ""),
         "DEFAULT_MODEL": existing["DEFAULT_MODEL"],
         "ENABLE_TITLE_GENERATION": "false",
         "ENABLE_TAGS_GENERATION": "false",
@@ -178,7 +252,10 @@ def _run_probe(command: list[str], timeout: int = 8) -> tuple[bool, str]:
 def _diagnostic_items() -> list[dict[str, str]]:
     env = _read_env()
     host_dir = pathlib.Path(env.get("HERMES_HOST_DIR") or pathlib.Path.home())
-    key = env.get("DEEPSEEK_API_KEY", "")
+    provider = env.get("OPDS_LLM_PROVIDER", "deepseek")
+    key = env.get("OPDS_LLM_API_KEY") or env.get("DEEPSEEK_API_KEY", "")
+    base_url = env.get("OPDS_LLM_BASE_URL") or env.get("DEEPSEEK_API_BASE") or "https://api.deepseek.com"
+    model = env.get("OPDS_LLM_MODEL") or env.get("DEFAULT_MODEL", "deepseek-v4-flash")
     items: list[dict[str, str]] = []
 
     def add(status: str, title: str, detail: str):
@@ -189,10 +266,14 @@ def _diagnostic_items() -> list[dict[str, str]]:
     else:
         add("warn", "本机配置", "还没有 .env，填写 API Key 后会自动创建")
 
-    if key and "your-deepseek-api-key" not in key:
-        add("ok", "DeepSeek API Key", "已配置，不会在页面显示明文")
+    add("ok", "模型 Provider", f"{provider} · {model} · {base_url}")
+
+    if key and "your-deepseek-api-key" not in key and key != "local":
+        add("ok", "Provider API Key", "已配置，不会在页面显示明文")
+    elif provider == "custom" and base_url.startswith(("http://localhost", "http://127.0.0.1", "http://host.docker.internal")):
+        add("ok", "Provider API Key", "本地 API 可不填 Key")
     else:
-        add("warn", "DeepSeek API Key", "未配置，请先填写 DeepSeek API Key")
+        add("warn", "Provider API Key", "未配置，请先填写 DeepSeek 或自定义 API Key")
 
     if host_dir.exists():
         add("ok", "Agent 文件目录", str(host_dir))
@@ -379,21 +460,16 @@ class OnboardingHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(400, {"error": f"请求解析失败: {exc}"})
             return
 
-        api_key: str = (data.get("deepseek_api_key") or "").strip()
-        model: str = _normalize_model((data.get("model") or "deepseek-v4-flash").strip())
-
-        # 基础校验
-        if not api_key:
-            self._send_json(400, {"error": "API Key 不能为空"})
-            return
-        if len(api_key) < 8:
-            self._send_json(400, {"error": "API Key 格式不正确（太短）"})
+        try:
+            provider = _provider_config(data)
+        except ValueError as exc:
+            self._send_json(400, {"error": str(exc)})
             return
 
         # 写入 .env
         _set_state("writing", "正在写入配置文件…")
         try:
-            _write_env(api_key, model)
+            _write_env(provider)
         except Exception as exc:
             _set_state("error", "写入 .env 失败", str(exc))
             self._send_json(500, {"error": f"写入配置失败: {exc}"})
