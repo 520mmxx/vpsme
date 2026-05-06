@@ -52,6 +52,25 @@ if [[ "${1:-}" == "fix" || "${1:-}" == "--fix" ]]; then
     exec python3 scripts/doctor.py --fix
 fi
 
+if [[ "${1:-}" == "start" || "${1:-}" == "start-lite" || "${1:-}" == "--start" ]]; then
+    echo "启动 OpenDeepSeek 轻量核心服务（不含 SearXNG full profile）..."
+    exec docker compose up -d
+fi
+
+if [[ "${1:-}" == "start-full" || "${1:-}" == "--start-full" ]]; then
+    echo "启动 OpenDeepSeek 完整服务（含 SearXNG，低内存电脑可能变卡）..."
+    exec docker compose --profile full up -d
+fi
+
+if [[ "${1:-}" == "stop" || "${1:-}" == "down" || "${1:-}" == "--stop" ]]; then
+    echo "停止 OpenDeepSeek 容器（不删除聊天记录和 volume）..."
+    exec docker compose down
+fi
+
+if [[ "${1:-}" == "stats" || "${1:-}" == "--stats" ]]; then
+    exec docker stats --no-stream
+fi
+
 # Web 模式：启动浏览器 onboarding wizard
 if [[ "$SETUP_MODE" == "web" ]]; then
     if ! command -v python3 &>/dev/null; then
@@ -171,7 +190,7 @@ if [[ -z "$SKIP_CONFIG" ]]; then
     if [[ "$SETUP_MODE" == "simple" ]]; then
         # ── 极简模式：只问 API key ──
         echo ""
-        info "正在配置（默认家庭模式 + 中文优化 + DeepSeek V4 Flash）"
+        info "正在配置（默认家庭模式 + 中文界面 + 轻量核心服务 + DeepSeek V4 Flash）"
         info "如需调整，下次跑 ./setup.sh --advanced"
         echo ""
         info "请粘贴你的 DeepSeek API Key（platform.deepseek.com 注册免费获取）"
@@ -185,11 +204,11 @@ if [[ -z "$SKIP_CONFIG" ]]; then
 
         # 智能默认
         DEFAULT_MODEL="deepseek-v4-flash"
-        ENABLE_CHINA_MODE="true"
+        ENABLE_CHINA_MODE="false"
         ADD_IM_PLACEHOLDER=0
         WEBUI_AUTH="false"
         DEPLOY_MODE_LABEL="家庭单用户"
-        ok "已自动选择：家庭单用户模式（零门槛访问）+ 中文优化 + DeepSeek V4 Flash"
+        ok "已自动选择：家庭单用户模式（零门槛访问）+ 轻量核心服务 + DeepSeek V4 Flash"
     else
         # ── 高级模式：保留现有 5 问题完整流程 ──
 
@@ -226,20 +245,20 @@ if [[ -z "$SKIP_CONFIG" ]]; then
 
         # 3. China mode
         echo ""
-        info "是否启用中文优化模式？（启用 SearXNG 搜索引擎 + zh-CN 本地化）"
-        read -rp "[Y/n，默认 Y]: " CHINA_MODE
-        case "${CHINA_MODE:-Y}" in
-            [Nn]*)
-                ENABLE_CHINA_MODE="false"
+        info "是否启动联网搜索服务 SearXNG？（会额外占内存；低内存电脑建议先不开）"
+        read -rp "[y/N，默认 N]: " CHINA_MODE
+        case "${CHINA_MODE:-N}" in
+            [Yy]*)
+                ENABLE_CHINA_MODE="true"
                 ;;
             *)
-                ENABLE_CHINA_MODE="true"
+                ENABLE_CHINA_MODE="false"
                 ;;
         esac
         if [[ "$ENABLE_CHINA_MODE" == "true" ]]; then
-            ok "中文优化模式: 已启用"
+            ok "联网搜索服务: 将随 full profile 启动"
         else
-            info "中文优化模式: 未启用"
+            info "联网搜索服务: 默认不启动，需要时可运行 ./setup.sh start-full"
         fi
 
         # 4. Deploy mode
@@ -320,6 +339,8 @@ DEFAULT_MODEL=${DEFAULT_MODEL}
 ENABLE_TITLE_GENERATION=false
 ENABLE_TAGS_GENERATION=false
 ENABLE_FOLLOW_UP_GENERATION=false
+ENABLE_CODE_INTERPRETER=false
+ENABLE_RAG_HYBRID_SEARCH=false
 ENABLE_LIGHTWEIGHT_ROUTING=true
 HERMES_AGENT_MAX_TOKENS=32768
 HERMES_AGENT_STREAM=false

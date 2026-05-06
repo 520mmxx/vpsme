@@ -92,6 +92,10 @@ def safe_fix() -> int:
         "OPDS_LLM_PRO_MODEL": env.get("OPDS_LLM_PRO_MODEL") or "deepseek-v4-pro",
         "HERMES_INFERENCE_PROVIDER": env.get("HERMES_INFERENCE_PROVIDER") or ("deepseek" if provider == "deepseek" else "custom"),
         "ENABLE_LIGHTWEIGHT_ROUTING": env.get("ENABLE_LIGHTWEIGHT_ROUTING") or "true",
+        "ENABLE_CHINA_MODE": "false",
+        "ENABLE_RAG_WEB_SEARCH": "false",
+        "ENABLE_CODE_INTERPRETER": "false",
+        "ENABLE_RAG_HYBRID_SEARCH": "false",
         "HERMES_AGENT_MAX_TOKENS": env.get("HERMES_AGENT_MAX_TOKENS") or "32768",
         "OPDS_ARTIFACT_PORT": env.get("OPDS_ARTIFACT_PORT") or "8770",
         "OPDS_ARTIFACT_ROOT": env.get("OPDS_ARTIFACT_ROOT") or "/host/OpenDeepSeek-Outputs",
@@ -103,7 +107,7 @@ def safe_fix() -> int:
     host_dir = Path(env.get("HERMES_HOST_DIR", str(ROOT / "agent-files"))).expanduser()
     for name in ["OpenDeepSeek-Inputs", "OpenDeepSeek-Outputs", "OpenDeepSeek-Memory"]:
         (host_dir / name).mkdir(parents=True, exist_ok=True)
-    print("已完成安全修复：补齐 Provider 变量并创建 OpenDeepSeek 输入/输出/记忆目录。")
+    print("已完成安全修复：补齐 Provider 变量、切回轻量启动配置，并创建 OpenDeepSeek 输入/输出/记忆目录。")
     print("没有删除 volume，没有启动容器，没有修改公网暴露设置。")
     return 0
 
@@ -200,6 +204,13 @@ class Doctor:
             self.add("error", "公网安全", "WEBUI_AUTH=false 且 BIND_HOST=0.0.0.0，不安全")
         else:
             self.add("ok", "公网安全", "未发现已知危险组合")
+
+        if self.env.get("ENABLE_CHINA_MODE", "false").lower() == "true":
+            self.add("warn", "启动配置", "ENABLE_CHINA_MODE=true 会默认启动 full profile/SearXNG；低内存电脑建议改为 false，按需运行 ./setup.sh start-full")
+        if self.env.get("ENABLE_CODE_INTERPRETER", "false").lower() == "true":
+            self.add("warn", "Open WebUI 负载", "ENABLE_CODE_INTERPRETER=true 会增加后台能力和资源占用；轻量发布默认建议 false")
+        if self.env.get("ENABLE_RAG_HYBRID_SEARCH", "false").lower() == "true":
+            self.add("warn", "RAG 负载", "ENABLE_RAG_HYBRID_SEARCH=true 可能触发 embedding/检索相关资源；轻量发布默认建议 false")
 
     def check_ports(self) -> None:
         for name, port in [("Open WebUI", 3000), ("Portal", 3001), ("Bridge Artifact", 8770), ("Hermes", 8642), ("SearXNG", 8889)]:

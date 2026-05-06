@@ -141,6 +141,28 @@ bash scripts/smoke-test.sh
 
 `verify` 只读检查 `.env`、Docker Compose、端口、`/host` 映射和高输出预算；`doctor` 做一键诊断；`report` 生成脱敏诊断包；`benchmark_routing.py` 离线验证普通问答不会误进 Hermes、真任务不会误走普通聊天。
 
+### 低内存 / 电脑变卡
+
+默认启动现在走轻量核心服务：
+
+```bash
+./setup.sh start
+```
+
+需要 SearXNG 联网搜索时再显式开启 full profile：
+
+```bash
+./setup.sh start-full
+```
+
+释放内存：
+
+```bash
+./setup.sh stop
+```
+
+更多见 [docs/PERFORMANCE-TUNING.md](docs/PERFORMANCE-TUNING.md)。
+
 ### 高级版（懂技术的用户）
 
 ```bash
