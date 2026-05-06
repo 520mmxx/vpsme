@@ -12,6 +12,18 @@ elif [[ "${1:-}" == "--web" || "${1:-}" == "-w" ]]; then
     SETUP_MODE="web"
 fi
 
+compose_up() {
+    local profile_args=()
+    if [[ "${1:-}" == "full" ]]; then
+        profile_args=(--profile full)
+    fi
+
+    # hermes-bridge is local glue code. Rebuild it on start so users do not run
+    # a stale cached image after pulling fixes.
+    docker compose "${profile_args[@]}" build hermes-bridge
+    docker compose "${profile_args[@]}" up -d
+}
+
 if [[ "${1:-}" == "verify" || "${1:-}" == "--verify" ]]; then
     if ! command -v python3 &>/dev/null; then
         echo "❌ verify 需要 python3"
@@ -54,12 +66,14 @@ fi
 
 if [[ "${1:-}" == "start" || "${1:-}" == "start-lite" || "${1:-}" == "--start" ]]; then
     echo "启动 OpenDeepSeek 轻量核心服务（不含 SearXNG full profile）..."
-    exec docker compose up -d
+    compose_up
+    exit $?
 fi
 
 if [[ "${1:-}" == "start-full" || "${1:-}" == "--start-full" ]]; then
     echo "启动 OpenDeepSeek 完整服务（含 SearXNG，低内存电脑可能变卡）..."
-    exec docker compose --profile full up -d
+    compose_up full
+    exit $?
 fi
 
 if [[ "${1:-}" == "stop" || "${1:-}" == "down" || "${1:-}" == "--stop" ]]; then
@@ -422,10 +436,10 @@ progress "启动服务..."
 
 if [[ "$ENABLE_CHINA_MODE" == "true" ]]; then
     info "使用 --profile full 启动（含 SearXNG）"
-    docker compose --profile full up -d
+    compose_up full
 else
     info "启动核心服务（Hermes + Open WebUI）"
-    docker compose up -d
+    compose_up
 fi
 
 ok "服务已启动"

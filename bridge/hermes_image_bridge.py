@@ -299,12 +299,12 @@ def model_list_payload() -> dict[str, Any]:
     return {"object": "list", "data": data}
 
 
-def set_run_state(run_id: str, status: str, **fields: Any) -> None:
+def set_run_state(run_id: str, state: str, **fields: Any) -> None:
     with RUNS_LOCK:
         current = RUNS.get(run_id, {})
         current.update({
             "run_id": run_id,
-            "status": status,
+            "status": state,
             "updated_at": dt.datetime.now(dt.UTC).isoformat(),
             **fields,
         })
