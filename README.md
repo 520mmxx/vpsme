@@ -4,11 +4,23 @@
 
 ## ⚡ 30 秒一键部署
 
+国际版：
+
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)
 ```
 
 无需懂 Docker。脚本会检测系统依赖、clone 项目、打开配置向导、启动容器、打开浏览器。**默认家庭模式**：访问 http://localhost:3000 直接对话，**不需要注册**。
+
+中国版（镜像/离线包发布后推荐国内用户使用）：
+
+```bash
+bash -c "$(curl -fsSL https://gitee.com/opendeepseek/opendeepseek/raw/main/install-cn.sh)"
+```
+
+当前 CN 入口已提供脚本、`docker-compose.cn.yml`、`.env.example.cn` 和网络体检骨架；正式对外宣称 China Ready 前，还需要同步 Gitee/GitCode、发布国内容器镜像和 OSS/COS 离线包。
+
+当前本地产品化进度：M0-M5 已落地，包含 release gate、中国版安装骨架、国内镜像/离线包脚本、中文 Portal、Artifact Manifest、四个 OpenDeepSeek 产品模式。云端发布动作仍需要维护者手动提供账号权限并确认。
 
 → 详细各平台一键命令见 [docs/ONE-CLICK.md](docs/ONE-CLICK.md)
 
@@ -51,7 +63,7 @@ OpenDeepSeek 是一个**本地部署的 AI Agent 平台** — 你可以把它理
 │ • 多模态 / 桌面 App / PWA    │
 │ • 6 个 Hermes Tools 桥接      │
 └──────────────────────────────┘
-              ↓ OpenAI 兼容 API（hermes-agent model）
+              ↓ OpenAI 兼容 API（opendeepseek-auto / fast / agent / deepwork）
 ┌──────────────────────────────┐
 │ Hermes Smart Bridge           │
 │ • 图片落盘到 /host            │
@@ -168,6 +180,12 @@ docker compose up -d
 - **[出错怎么办](docs/TROUBLESHOOT.md)** — 15 个常见错误的中文大白话排错指南
 - **[样例 Prompt 集](docs/PROMPT-COOKBOOK.md)** — 15 个中国普通用户场景（写周报/翻译/旅游攻略...）复制即用
 - **[一键部署完整指南](docs/ONE-CLICK.md)** — macOS / Linux / Windows WSL2 各平台命令
+- **[我应该下载哪个版本](docs/zh-CN/00-我应该下载哪个版本.md)** — Mac / Windows / Linux / 离线镜像包选择
+- **[国内网络问题](docs/zh-CN/04-国内网络问题.md)** — GitHub / Docker / pip / npm / 搜索不可用时怎么办
+- **[离线安装](docs/zh-CN/05-离线安装.md)** — 国内离线包、镜像包、文件权限和卸载说明
+- **[填写 DeepSeek Key](docs/zh-CN/06-填写DeepSeek-Key.md)** — 获取、填写、替换 API Key 和安全注意
+- **[文件权限说明](docs/zh-CN/07-文件权限说明.md)** — Agent 能访问哪里、生成文件在哪、怎么扩大授权
+- **[中文文档索引](docs/zh-CN/README.md)** — 国内用户安装、离线包、Key、权限和维护者发布入口
 
 ### 📦 部署 / 运维
 - [安装指南](docs/INSTALL.md) — 详细安装步骤和排错
@@ -175,9 +193,17 @@ docker compose up -d
 - [安全配置](docs/SECURITY.md) — 公网部署加固清单 + Tailscale 推荐
 - [IM 桥接配置](docs/IM-BRIDGE.md) — 钉钉 / 飞书 / 企微 / 邮件 / QQ Bot 接入
 - [中国网络优化](docs/CHINA-NETWORK.md) — 镜像源、代理配置、DNS 优化
+- [OpenDeepSeek CN 产品线路线图](docs/OPENDEEPSEEK-CN-ROADMAP.md) — 国内分发、离线包、Portal、产物中心规划
+- [发布检查清单](docs/RELEASE-CHECKLIST.md) — release gate、人工 UI、安全和 China Ready 发布检查
+- [Artifact Manifest](docs/ARTIFACT-MANIFEST.md) — 产物卡片、只读预览服务和 manifest schema
+- [离线包发布流程](docs/zh-CN/离线包发布流程.md) — 国内镜像、离线包、checksum 和 OSS/COS 发布步骤
+- [中文演示脚本](docs/DEMO-SCRIPT-CN.md) — 视频/README 动图/路演的演示流程
 
 ### 🛠️ 进阶 / 开发者
+- [项目需求与当前进展](docs/PROJECT-REQUIREMENTS-AND-STATUS.md) — 项目初心、已验证链路和下一步
+- [最终交接文档](docs/FINAL-HANDOVER.md) — M0-M6 完成内容、验证结果、启动方式和发布卡口
 - [架构深度文档](docs/ARCHITECTURE.md) — 设计哲学 / 数据流 / 容器拓扑 / 扩展点
+- [Goal 工作台](docs/GOALS/OPENDEEPSEEK-CN.md) — M0-M6 分阶段落地中国版产品线
 - [贡献指南](CONTRIBUTING.md) — 提 PR 流程 + commit message 规范
 - [用 Qwen3.6 review 项目](docs/QWEN-REVIEW.md) — OpenClaw + 阿里云 Coding Plan 合规调用
 - [多模型协作工作流](docs/MULTI-MODEL-WORKFLOW.md) — Kimi/Qwen/GLM/MiniMax + Codex/Claude 协作模板（可复用）

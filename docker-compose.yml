@@ -103,6 +103,9 @@ services:
     build:
       context: ./bridge
     container_name: opendeepseek-hermes-bridge
+    ports:
+      # 只给本机浏览器预览产物，不随 BIND_HOST 暴露公网。
+      - "127.0.0.1:${OPDS_ARTIFACT_PORT:-8770}:8765"
     environment:
       - HERMES_BASE_URL=http://hermes:8642/v1
       - "HERMES_API_KEY=${HERMES_API_KEY:?Missing required: HERMES_API_KEY (run ./setup.sh)}"
@@ -123,6 +126,9 @@ services:
       - OPDS_SHARED_MEMORY_PATH=${OPDS_SHARED_MEMORY_PATH:-/host/OpenDeepSeek-Memory/profile.md}
       - OPDS_MEMORY_SNAPSHOT_MAX_CHARS=${OPDS_MEMORY_SNAPSHOT_MAX_CHARS:-4000}
       - OPDS_HOST_DISPLAY_PREFIX=${HERMES_HOST_DIR:-/host}
+      - OPDS_ARTIFACT_ROOT=${OPDS_ARTIFACT_ROOT:-/host/OpenDeepSeek-Outputs}
+      - OPDS_ARTIFACT_PUBLIC_BASE_URL=${OPDS_ARTIFACT_PUBLIC_BASE_URL:-http://localhost:8770}
+      - OPDS_ARTIFACT_MAX_FILES=${OPDS_ARTIFACT_MAX_FILES:-100}
       - IMAGE_BRIDGE_HOST_ROOT=/host
       - IMAGE_BRIDGE_PUBLIC_HOST_PREFIX=/host
       - IMAGE_BRIDGE_OCR_LANG=chi_sim+eng
@@ -169,10 +175,10 @@ services:
       # WEBUI_AUTH=false 跳过登录（仅适合家庭单机/Tailscale 私有网络）
       # 公网部署务必改为 true 并配反向代理
       - WEBUI_AUTH=${WEBUI_AUTH:-false}
-      # 默认预选模型（Hermes 暴露的 model id 是 hermes-agent）
-      - DEFAULT_MODELS=${DEFAULT_MODELS_FRONTEND:-hermes-agent}
-      - DEFAULT_PINNED_MODELS=hermes-agent
-      # 速度优先：Open WebUI 的标题/标签/追问会额外调用 hermes-agent。
+      # 默认预选产品化模型；Bridge 再映射到 DeepSeek/Hermes。
+      - DEFAULT_MODELS=${DEFAULT_MODELS_FRONTEND:-opendeepseek-auto}
+      - DEFAULT_PINNED_MODELS=${DEFAULT_PINNED_MODELS:-opendeepseek-auto,opendeepseek-fast,opendeepseek-agent,opendeepseek-deepwork}
+      # 速度优先：Open WebUI 的标题/标签/追问会额外调用模型。
       # 在 Agent 架构里这会重复携带工具上下文，默认关闭，避免一次对话变多次慢请求。
       - ENABLE_TITLE_GENERATION=${ENABLE_TITLE_GENERATION:-false}
       - ENABLE_TAGS_GENERATION=${ENABLE_TAGS_GENERATION:-false}

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "project": "OpenDeepSeek CN",
+  "version": "0.5.0-cn",
+  "commit": "replace-with-release-commit",
+  "published_at": "replace-with-release-time",
+  "status": "template",
+  "sources": {
+    "github": "https://github.com/mouxue56-debug/opendeepseek",
+    "gitee": "https://gitee.com/opendeepseek/opendeepseek",
+    "gitcode": "https://gitcode.com/opendeepseek/opendeepseek"
+  },
+  "download_base_urls": {
+    "oss": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn",
+    "cos": "https://opendeepseek-cn.cos.ap-shanghai.myqcloud.com/releases/v0.5.0-cn"
+  },
+  "assets": {
+    "macos-arm64": {
+      "filename": "opendeepseek-cn-v0.5.0-cn-macos-arm64.zip",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-cn-v0.5.0-cn-macos-arm64.zip",
+      "sha256": "replace-after-build"
+    },
+    "macos-amd64": {
+      "filename": "opendeepseek-cn-v0.5.0-cn-macos-amd64.zip",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-cn-v0.5.0-cn-macos-amd64.zip",
+      "sha256": "replace-after-build"
+    },
+    "windows-amd64": {
+      "filename": "opendeepseek-cn-v0.5.0-cn-windows-amd64.zip",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-cn-v0.5.0-cn-windows-amd64.zip",
+      "sha256": "replace-after-build"
+    },
+    "linux-amd64": {
+      "filename": "opendeepseek-cn-v0.5.0-cn-linux-amd64.tar.gz",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-cn-v0.5.0-cn-linux-amd64.tar.gz",
+      "sha256": "replace-after-build"
+    },
+    "linux-arm64": {
+      "filename": "opendeepseek-cn-v0.5.0-cn-linux-arm64.tar.gz",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-cn-v0.5.0-cn-linux-arm64.tar.gz",
+      "sha256": "replace-after-build"
+    }
+  },
+  "image_bundles": {
+    "amd64": {
+      "filename": "opendeepseek-images-cn-v0.5.0-cn-amd64.tar.zst",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-images-cn-v0.5.0-cn-amd64.tar.zst",
+      "sha256": "replace-after-build"
+    },
+    "arm64": {
+      "filename": "opendeepseek-images-cn-v0.5.0-cn-arm64.tar.zst",
+      "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/opendeepseek-images-cn-v0.5.0-cn-arm64.tar.zst",
+      "sha256": "replace-after-build"
+    }
+  },
+  "images": {
+    "registry": "registry.cn-hangzhou.aliyuncs.com/opendeepseek",
+    "tags": {
+      "open-webui": "0.9.2-opds-cn",
+      "hermes": "2026.4.23-opds-cn",
+      "hermes-bridge": "0.5.0-cn",
+      "searxng": "2026.4.28-opds-cn"
+    },
+    "digest_lock": {
+      "open-webui": "replace-with-sha256-digest",
+      "hermes": "replace-with-sha256-digest",
+      "hermes-bridge": "replace-with-sha256-digest",
+      "searxng": "replace-with-sha256-digest"
+    }
+  },
+  "checksums": {
+    "filename": "checksums.txt",
+    "url": "https://opendeepseek-cn.oss-cn-hangzhou.aliyuncs.com/releases/v0.5.0-cn/checksums.txt",
+    "sha256": "replace-after-build"
+  },
+  "install": {
+    "macos_linux": "bash -c \"$(curl -fsSL https://gitee.com/opendeepseek/opendeepseek/raw/main/install-cn.sh)\"",
+    "windows_powershell": "irm https://gitee.com/opendeepseek/opendeepseek/raw/main/install-cn.ps1 | iex",
+    "offline": "OPDS_CN_OFFLINE=/path/to/opendeepseek-images-cn-v0.5.0-cn-amd64.tar.zst bash install-cn.sh"
+  }
+}

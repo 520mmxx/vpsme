@@ -19,7 +19,10 @@
           <span>OpenDeepSeek</span>
         </a>
         <div class="nav-links">
+          <a href="#modes">模式</a>
           <a href="#run">怎么运行</a>
+          <a href="#diagnostics">体检</a>
+          <a href="#artifacts">产物</a>
           <a href="#agent">Agent 能力</a>
           <a href="https://github.com/mouxue56-debug/opendeepseek" target="_blank" rel="noopener">GitHub</a>
         </div>
@@ -69,6 +72,68 @@
         </div>
       </div>
 
+      <section class="section" id="modes" aria-labelledby="modes-title">
+        <div class="section-heading">
+          <p class="eyebrow">四种模式</p>
+          <h2 id="modes-title">不用理解底层架构，按任务选择就行。</h2>
+        </div>
+        <div class="mode-grid">
+          <article class="mode-card">
+            <span class="mode-token">auto</span>
+            <h3>自动模式</h3>
+            <p>默认推荐。普通问题秒回；涉及文件、网页、图片、提醒和真实产物时自动切到 Hermes。</p>
+          </article>
+          <article class="mode-card">
+            <span class="mode-token">fast</span>
+            <h3>极速问答</h3>
+            <p>强制走 DeepSeek V4 Flash 轻量路径，适合解释、翻译、改文案和临时问答。</p>
+          </article>
+          <article class="mode-card">
+            <span class="mode-token">agent</span>
+            <h3>真 Agent</h3>
+            <p>强制 Hermes 执行。适合读取 /host、生成网页、写周报、整理文件、创建提醒。</p>
+          </article>
+          <article class="mode-card">
+            <span class="mode-token">deepwork</span>
+            <h3>深度任务</h3>
+            <p>给长报告、复杂代码、多步骤资料分析预留的高预算任务模式。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section portal-section" aria-labelledby="portal-title">
+        <div class="section-heading">
+          <p class="eyebrow">小白入口</p>
+          <h2 id="portal-title">启动前先看这四件事。</h2>
+        </div>
+        <div class="portal-grid">
+          <article class="portal-card">
+            <span class="portal-index">01</span>
+            <h3>填写 DeepSeek Key</h3>
+            <p>Key 只写入本机 `.env`，页面和诊断接口都不会回显明文。</p>
+            <button class="text-action" onclick="goStep(2)">去填写</button>
+          </article>
+          <article class="portal-card">
+            <span class="portal-index">02</span>
+            <h3>确认文件权限</h3>
+            <p>默认建议只访问 OpenDeepSeek 专用目录；需要桌面/下载/文档时再手动授权。</p>
+            <a class="text-action" href="#permissions">查看说明</a>
+          </article>
+          <article class="portal-card">
+            <span class="portal-index">03</span>
+            <h3>运行体检</h3>
+            <p>检查 Docker、Compose、Open WebUI、Hermes、SearXNG 是否可用。</p>
+            <a class="text-action" href="#diagnostics">打开体检</a>
+          </article>
+          <article class="portal-card">
+            <span class="portal-index">04</span>
+            <h3>查看产物</h3>
+            <p>网页、报告、周报和脚本统一建议保存到 OpenDeepSeek-Outputs。</p>
+            <a class="text-action" href="#artifacts">产物入口</a>
+          </article>
+        </div>
+      </section>
+
       <section class="section" id="agent" aria-labelledby="agent-title">
         <div class="section-heading">
           <p class="eyebrow">为什么值得用</p>
@@ -90,6 +155,29 @@
         </div>
       </section>
 
+      <section class="section permissions-section" id="permissions" aria-labelledby="permissions-title">
+        <div class="section-heading">
+          <p class="eyebrow">文件权限</p>
+          <h2 id="permissions-title">让 Agent 能干活，也要让用户心里有底。</h2>
+        </div>
+        <div class="permission-layout">
+          <div class="permission-copy">
+            <p>OpenDeepSeek 的 Agent 能力来自 Hermes，所以它必须能看到你授权的本机目录。中国版默认会引导用户先使用专用目录，避免一上来把整个电脑交出去。</p>
+            <ul class="check-list">
+              <li>默认输入目录：OpenDeepSeek-Inputs</li>
+              <li>默认产物目录：OpenDeepSeek-Outputs</li>
+              <li>默认记忆目录：OpenDeepSeek-Memory</li>
+              <li>桌面、下载、文档需要用户明确授权后再开放</li>
+            </ul>
+          </div>
+          <div class="permission-box">
+            <span class="node-kicker">推荐默认</span>
+            <strong>~/OpenDeepSeek-Agent</strong>
+            <p>这个目录适合录视频、试用和分享给小白。需要更强能力时，再在 .env 或后续 Portal 里扩大 `HERMES_HOST_DIR`。</p>
+          </div>
+        </div>
+      </section>
+
       <section class="section run-section" id="run" aria-labelledby="run-title">
         <div class="section-heading">
           <p class="eyebrow">怎么运行</p>
@@ -98,9 +186,15 @@
         <div class="run-grid">
           <article class="run-block primary-run">
             <span class="step-label">推荐</span>
-            <h3>一键安装</h3>
+            <h3>国际版一键安装</h3>
             <p>会自动拉取项目、打开配置向导、启动 Open WebUI + Smart Bridge + Hermes。</p>
             <pre><code>bash &lt;(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/main/install.sh)</code></pre>
+          </article>
+          <article class="run-block">
+            <span class="step-label">国内版</span>
+            <h3>Gitee 入口</h3>
+            <p>正式 China Ready 后给国内用户使用，配套国内镜像和离线包。</p>
+            <pre><code>bash -c "$(curl -fsSL https://gitee.com/opendeepseek/opendeepseek/raw/main/install-cn.sh)"</code></pre>
           </article>
           <article class="run-block">
             <span class="step-label">本地仓库</span>
@@ -109,13 +203,39 @@
             <pre><code>cd opendeepseek
 ./setup.sh --web</code></pre>
           </article>
-          <article class="run-block">
-            <span class="step-label">手动</span>
-            <h3>Docker Compose</h3>
-            <p>适合想自己编辑 .env、检查日志和控制容器的人。</p>
-            <pre><code>cp .env.example .env
-docker compose --profile full up -d</code></pre>
+        </div>
+      </section>
+
+      <section class="section diagnostics-section" id="diagnostics" aria-labelledby="diagnostics-title">
+        <div class="section-heading">
+          <p class="eyebrow">本机体检</p>
+          <h2 id="diagnostics-title">先确认环境，再让 Agent 干活。</h2>
+        </div>
+        <div class="diagnostic-toolbar">
+          <p>体检只读，不会启动容器，也不会修改文件。服务刚停止时出现黄色提示是正常的。</p>
+          <button class="btn btn-secondary compact-btn" onclick="runDiagnostics()">刷新体检</button>
+        </div>
+        <div class="status-grid" id="statusGrid" aria-live="polite">
+          <article class="status-card">
+            <span class="status-dot warn"></span>
+            <strong>等待体检</strong>
+            <p>页面加载后会自动检查本机状态。</p>
           </article>
+        </div>
+      </section>
+
+      <section class="section artifacts-section" id="artifacts" aria-labelledby="artifacts-title">
+        <div class="section-heading">
+          <p class="eyebrow">我的产物</p>
+          <h2 id="artifacts-title">让用户看见文件，而不是只看见路径。</h2>
+        </div>
+        <div class="artifact-preview">
+          <div>
+            <span class="node-kicker">M4 将继续落地</span>
+            <h3>产物中心占位</h3>
+            <p>网页、PPT、报告、脚本会统一建议保存到 OpenDeepSeek-Outputs。下一阶段会增加 Artifact Manifest 和只读预览服务。</p>
+          </div>
+          <div class="artifact-path" id="outputsHint">OpenDeepSeek-Outputs</div>
         </div>
       </section>
     </section>
@@ -175,6 +295,11 @@ docker compose --profile full up -d</code></pre>
             </label>
           </div>
         </div>
+      </div>
+
+      <div class="permission-mini" aria-label="默认文件权限说明">
+        <strong>默认文件权限</strong>
+        <p>推荐先让 Agent 使用 `~/OpenDeepSeek-Agent` 专用目录。需要它读取桌面、下载或文档时，再手动扩大授权范围。</p>
       </div>
 
       <button class="btn btn-primary" id="activateBtn" onclick="handleActivate()">激活并启动</button>
@@ -472,6 +597,64 @@ function retryActivate() {
     btn.textContent = '激活并启动';
   }
 }
+
+function statusLabel(status) {
+  if (status === 'ok') return '正常';
+  if (status === 'error') return '需要处理';
+  return '待确认';
+}
+
+function renderDiagnostics(items) {
+  const grid = document.getElementById('statusGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  items.forEach(item => {
+    const card = document.createElement('article');
+    card.className = 'status-card';
+    card.innerHTML = `
+      <div class="status-head">
+        <span class="status-dot ${item.status}"></span>
+        <span>${statusLabel(item.status)}</span>
+      </div>
+      <strong></strong>
+      <p></p>
+    `;
+    card.querySelector('strong').textContent = item.title;
+    card.querySelector('p').textContent = item.detail;
+    grid.appendChild(card);
+  });
+}
+
+async function runDiagnostics() {
+  const grid = document.getElementById('statusGrid');
+  if (grid) {
+    grid.innerHTML = `
+      <article class="status-card">
+        <span class="status-dot warn"></span>
+        <strong>正在体检</strong>
+        <p>读取本机配置和服务状态...</p>
+      </article>
+    `;
+  }
+
+  try {
+    const resp = await fetch('/api/diagnostics');
+    const data = await resp.json();
+    renderDiagnostics(data.items || []);
+    if (data.outputs_hint) {
+      const outputs = document.getElementById('outputsHint');
+      if (outputs) outputs.textContent = data.outputs_hint;
+    }
+  } catch (err) {
+    renderDiagnostics([{
+      status: 'error',
+      title: '体检接口不可用',
+      detail: err.message || '请确认 onboarding/server.py 正在运行',
+    }]);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', runDiagnostics);
 </script>
 </body>
 </html>

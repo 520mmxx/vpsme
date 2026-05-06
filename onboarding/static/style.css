@@ -315,22 +315,213 @@ h3 {
 }
 
 .feature-grid,
-.run-grid {
+.run-grid,
+.mode-grid,
+.portal-grid,
+.status-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
+.feature-grid,
+.run-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mode-grid,
+.portal-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .feature-card,
-.run-block {
+.run-block,
+.mode-card,
+.portal-card,
+.status-card,
+.permission-box {
   padding: 18px;
 }
 
 .feature-card p,
-.run-block p {
+.run-block p,
+.mode-card p,
+.portal-card p,
+.status-card p,
+.permission-box p {
   margin-bottom: 0;
   color: var(--subtle);
   font-size: 0.94rem;
+}
+
+.mode-card,
+.portal-card,
+.status-card,
+.permission-box,
+.artifact-preview {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.mode-card {
+  display: grid;
+  gap: 10px;
+}
+
+.mode-token,
+.portal-index {
+  display: inline-grid;
+  place-items: center;
+  width: max-content;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.portal-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.text-action {
+  width: max-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-dark);
+  font-family: var(--font);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.permission-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.permission-copy {
+  color: var(--muted);
+}
+
+.check-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check-list li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--text);
+}
+
+.check-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--brand-dark);
+  font-weight: 900;
+}
+
+.permission-box {
+  display: grid;
+  gap: 8px;
+  background: var(--surface-soft);
+}
+
+.diagnostic-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.diagnostic-toolbar p {
+  margin: 0;
+  color: var(--subtle);
+}
+
+.compact-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.status-card {
+  display: grid;
+  gap: 8px;
+  min-height: 120px;
+}
+
+.status-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--subtle);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--faint);
+}
+
+.status-dot.ok {
+  background: var(--brand);
+}
+
+.status-dot.warn {
+  background: #d97706;
+}
+
+.status-dot.error {
+  background: var(--danger);
+}
+
+.artifact-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
+  gap: 18px;
+  align-items: center;
+  padding: 22px;
+}
+
+.artifact-preview p {
+  margin-bottom: 0;
+  color: var(--subtle);
+}
+
+.artifact-path {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #111827;
+  color: #f9fafb;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .run-block pre {
@@ -455,6 +646,25 @@ h3 {
 .form-hint a {
   color: var(--brand-dark);
   font-weight: 700;
+}
+
+.permission-mini {
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.permission-mini strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.permission-mini p {
+  margin: 0;
+  color: var(--subtle);
+  font-size: 0.86rem;
 }
 
 .model-options {
@@ -693,9 +903,19 @@ h3 {
   .hero-grid,
   .feature-grid,
   .run-grid,
+  .mode-grid,
+  .portal-grid,
+  .status-grid,
   .flow-split,
-  .model-options {
+  .model-options,
+  .permission-layout,
+  .artifact-preview {
     grid-template-columns: 1fr;
+  }
+
+  .diagnostic-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .hero-grid {

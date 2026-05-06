@@ -7,6 +7,7 @@ OpenDeepSeek Onboarding Server
 
 import http.server
 import json
+import os
 import pathlib
 import secrets
 import subprocess
@@ -79,12 +80,18 @@ def _write_env(deepseek_api_key: str, model: str):
         "ENABLE_TAGS_GENERATION": "false",
         "ENABLE_FOLLOW_UP_GENERATION": "false",
         "ENABLE_LIGHTWEIGHT_ROUTING": "true",
+        "DEFAULT_MODELS_FRONTEND": "opendeepseek-auto",
+        "DEFAULT_PINNED_MODELS": "opendeepseek-auto,opendeepseek-fast,opendeepseek-agent,opendeepseek-deepwork",
         "HERMES_AGENT_MAX_TOKENS": "32768",
         "HERMES_AGENT_STREAM": "false",
         "HERMES_PROGRESS_STREAM": "true",
         "OPDS_SHARED_MEMORY_PATH": "/host/OpenDeepSeek-Memory/profile.md",
         "OPDS_MEMORY_SNAPSHOT_MAX_CHARS": "4000",
         "OPDS_HOST_DISPLAY_PREFIX": existing["HERMES_HOST_DIR"],
+        "OPDS_ARTIFACT_PORT": "8770",
+        "OPDS_ARTIFACT_ROOT": "/host/OpenDeepSeek-Outputs",
+        "OPDS_ARTIFACT_PUBLIC_BASE_URL": "http://localhost:8770",
+        "OPDS_ARTIFACT_MAX_FILES": "100",
         "HERMES_API_KEY": existing["HERMES_API_KEY"],
         "WEBUI_SECRET_KEY": existing["WEBUI_SECRET_KEY"],
         "HERMES_HOST_DIR": existing["HERMES_HOST_DIR"],
@@ -133,6 +140,90 @@ def _check_service(url: str, timeout: int = 3) -> bool:
             return resp.status < 400
     except Exception:
         return False
+
+
+def _read_env() -> dict[str, str]:
+    env: dict[str, str] = {}
+    if not ENV_FILE.exists():
+        return env
+    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        env[key.strip()] = value.strip()
+    return env
+
+
+def _run_probe(command: list[str], timeout: int = 8) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            command,
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except FileNotFoundError:
+        return False, f"找不到命令：{command[0]}"
+    except subprocess.TimeoutExpired:
+        return False, "命令超时"
+    except Exception as exc:
+        return False, f"{type(exc).__name__}: {exc}"
+
+    output = (result.stderr or result.stdout).strip()
+    return result.returncode == 0, output[:500]
+
+
+def _diagnostic_items() -> list[dict[str, str]]:
+    env = _read_env()
+    host_dir = pathlib.Path(env.get("HERMES_HOST_DIR") or pathlib.Path.home())
+    key = env.get("DEEPSEEK_API_KEY", "")
+    items: list[dict[str, str]] = []
+
+    def add(status: str, title: str, detail: str):
+        items.append({"status": status, "title": title, "detail": detail})
+
+    if ENV_FILE.exists():
+        add("ok", "本机配置", ".env 已存在")
+    else:
+        add("warn", "本机配置", "还没有 .env，填写 API Key 后会自动创建")
+
+    if key and "your-deepseek-api-key" not in key:
+        add("ok", "DeepSeek API Key", "已配置，不会在页面显示明文")
+    else:
+        add("warn", "DeepSeek API Key", "未配置，请先填写 DeepSeek API Key")
+
+    if host_dir.exists():
+        add("ok", "Agent 文件目录", str(host_dir))
+    else:
+        add("warn", "Agent 文件目录", f"目录不存在，启动时会创建：{host_dir}")
+
+    docker_ok, docker_msg = _run_probe(["docker", "--version"], timeout=3)
+    add("ok" if docker_ok else "error", "Docker 命令", docker_msg or "Docker 可用")
+
+    daemon_ok, daemon_msg = _run_probe(["docker", "info"], timeout=5)
+    add(
+        "ok" if daemon_ok else "warn",
+        "Docker daemon",
+        "已运行" if daemon_ok else (daemon_msg or "未运行，启动 Docker Desktop / OrbStack 后再启动项目"),
+    )
+
+    compose_ok, compose_msg = _run_probe(["docker", "compose", "config", "-q"], timeout=8)
+    add("ok" if compose_ok else "error", "Docker Compose 配置", "通过" if compose_ok else compose_msg)
+
+    cn_compose_ok, cn_compose_msg = _run_probe(
+        ["docker", "compose", "-f", "docker-compose.cn.yml", "config", "-q"],
+        timeout=8,
+    )
+    if (PROJECT_ROOT / "docker-compose.cn.yml").exists():
+        add("ok" if cn_compose_ok else "warn", "中国版 Compose", "通过" if cn_compose_ok else cn_compose_msg)
+
+    add("ok" if _check_service("http://localhost:3000", timeout=1) else "warn", "Open WebUI", "http://localhost:3000")
+    add("ok" if _check_service("http://localhost:8642/health", timeout=1) else "warn", "Hermes Agent", "http://localhost:8642/health")
+    add("ok" if _check_service("http://localhost:8889", timeout=1) else "warn", "SearXNG", "可选联网搜索服务")
+
+    return items
 
 
 def _log(msg: str):
@@ -258,6 +349,8 @@ class OnboardingHandler(http.server.BaseHTTPRequestHandler):
             self._serve_file(STATIC_DIR / rel)
         elif path == "/api/status":
             self._api_status()
+        elif path == "/api/diagnostics":
+            self._api_diagnostics()
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -328,6 +421,13 @@ class OnboardingHandler(http.server.BaseHTTPRequestHandler):
             "error": state["error"],
         })
 
+    def _api_diagnostics(self):
+        self._send_json(200, {
+            "items": _diagnostic_items(),
+            "webui_url": "http://localhost:3000",
+            "outputs_hint": str(pathlib.Path(_read_env().get("HERMES_HOST_DIR") or pathlib.Path.home()) / "OpenDeepSeek-Outputs"),
+        })
+
     # --- 静态文件 -----------------------------------------------------------
 
     def _serve_file(self, path: pathlib.Path, content_type: str = None):
@@ -389,16 +489,16 @@ def main():
     print(f"   监听地址：{HOST}:{PORT}（仅本机）")
     print(f"   按 Ctrl+C 停止\n")
 
-    # 尝试自动打开浏览器
-    try:
-        if sys.platform == "darwin":
-            subprocess.Popen(["open", f"http://localhost:{PORT}"])
-        elif sys.platform.startswith("linux"):
-            subprocess.Popen(["xdg-open", f"http://localhost:{PORT}"])
-        elif sys.platform == "win32":
-            subprocess.Popen(["start", f"http://localhost:{PORT}"], shell=True)
-    except Exception:
-        pass
+    if os.environ.get("OPDS_NO_OPEN", "").lower() not in {"1", "true", "yes"}:
+        try:
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", f"http://localhost:{PORT}"])
+            elif sys.platform.startswith("linux"):
+                subprocess.Popen(["xdg-open", f"http://localhost:{PORT}"])
+            elif sys.platform == "win32":
+                subprocess.Popen(["start", f"http://localhost:{PORT}"], shell=True)
+        except Exception:
+            pass
 
     try:
         server.serve_forever()

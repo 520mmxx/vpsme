@@ -70,6 +70,15 @@ CASES: list[tuple[str, str, str, int, bool]] = [
     ("请不要只解释，要实际使用工具", "hermes", "tools", 0, False),
 ]
 
+VIRTUAL_MODEL_CASES: list[tuple[str, str, str, str, int]] = [
+    ("opendeepseek-auto", "你好", "deepseek-lite", "simple-chat", 0),
+    ("opendeepseek-fast", "请生成一个网页 index.html", "deepseek-lite", "forced-fast-model", 0),
+    ("opendeepseek-fast", "请总结这张图片", "hermes", "image", 1),
+    ("opendeepseek-agent", "你好", "hermes", "forced-agent-model", 0),
+    ("opendeepseek-deepwork", "写一份深度报告", "hermes", "deepwork-model", 0),
+    ("hermes-agent", "请查看 /host/Desktop", "hermes", "host-path", 0),
+]
+
 
 def main() -> int:
     passed = 0
@@ -92,7 +101,17 @@ def main() -> int:
             continue
         failed.append((index, prompt, expected_route, expected_reason_prefix, result))
 
-    total = len(CASES)
+    base_total = len(CASES)
+    for offset, (model, prompt, expected_route, expected_reason_prefix, image_count) in enumerate(VIRTUAL_MODEL_CASES, 1):
+        result = route_prompt_for_testing(prompt, image_count=image_count, model=model)
+        route_ok = result["route"] == expected_route
+        reason_ok = result["reason"].startswith(expected_reason_prefix)
+        if route_ok and reason_ok:
+            passed += 1
+            continue
+        failed.append((base_total + offset, f"[{model}] {prompt}", expected_route, expected_reason_prefix, result))
+
+    total = len(CASES) + len(VIRTUAL_MODEL_CASES)
     f1 = passed / total
     print("OpenDeepSeek offline routing benchmark")
     print(f"  total: {total}")

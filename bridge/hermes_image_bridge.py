@@ -22,13 +22,14 @@ import mimetypes
 import os
 import re
 import sys
+import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
-from urllib.parse import quote_plus
+from urllib.parse import quote, quote_plus, unquote
 
 import requests
 
@@ -45,10 +46,15 @@ HERMES_API_KEY = os.environ.get("HERMES_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1").rstrip("/")
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-flash")
+HERMES_MODEL_ID = os.environ.get("HERMES_MODEL_ID", "hermes-agent")
 ENABLE_LIGHTWEIGHT_ROUTING = os.environ.get("ENABLE_LIGHTWEIGHT_ROUTING", "true").lower() == "true"
 HOST_ROOT = Path(os.environ.get("IMAGE_BRIDGE_HOST_ROOT", "/host"))
 PUBLIC_HOST_PREFIX = os.environ.get("IMAGE_BRIDGE_PUBLIC_HOST_PREFIX", "/host").rstrip("/")
 UPLOAD_ROOT = HOST_ROOT / "OpenDeepSeek-Inputs"
+OUTPUT_ROOT = Path(os.environ.get("OPDS_ARTIFACT_ROOT", str(HOST_ROOT / "OpenDeepSeek-Outputs")))
+ARTIFACT_INDEX_DIR = OUTPUT_ROOT / ".opendeepseek-artifacts"
+ARTIFACT_PUBLIC_BASE_URL = os.environ.get("OPDS_ARTIFACT_PUBLIC_BASE_URL", "http://localhost:8770").rstrip("/")
+ARTIFACT_MAX_FILES = int(os.environ.get("OPDS_ARTIFACT_MAX_FILES", "100"))
 LISTEN_HOST = os.environ.get("IMAGE_BRIDGE_HOST", "0.0.0.0")
 LISTEN_PORT = int(os.environ.get("IMAGE_BRIDGE_PORT", "8765"))
 OCR_LANG = os.environ.get("IMAGE_BRIDGE_OCR_LANG", "chi_sim+eng")
@@ -68,6 +74,33 @@ REALTIME_SEARCH_URL = os.environ.get("OPDS_REALTIME_SEARCH_URL", "http://searxng
 REALTIME_SEARCH_TIMEOUT = float(os.environ.get("OPDS_REALTIME_SEARCH_TIMEOUT", "4"))
 REALTIME_SEARCH_MAX_RESULTS = int(os.environ.get("OPDS_REALTIME_SEARCH_MAX_RESULTS", "6"))
 DELEGATE_OPENWEBUI_NATIVE_TOOLS = os.environ.get("OPDS_DELEGATE_OPENWEBUI_NATIVE_TOOLS", "true").lower() == "true"
+
+VIRTUAL_MODELS: dict[str, dict[str, str]] = {
+    "opendeepseek-auto": {
+        "mode": "auto",
+        "name": "OpenDeepSeek 自动模式",
+        "description": "普通问答走 DeepSeek V4 Flash，真任务自动切 Hermes Agent。",
+    },
+    "opendeepseek-fast": {
+        "mode": "fast",
+        "name": "OpenDeepSeek 极速问答",
+        "description": "强制轻量问答路径，适合解释、翻译、改文案。",
+    },
+    "opendeepseek-agent": {
+        "mode": "agent",
+        "name": "OpenDeepSeek 真 Agent",
+        "description": "强制 Hermes 执行文件、网页、提醒、图片、工具任务。",
+    },
+    "opendeepseek-deepwork": {
+        "mode": "deepwork",
+        "name": "OpenDeepSeek 深度任务",
+        "description": "高预算 Hermes 路径，适合长报告、复杂代码、多步骤任务。",
+    },
+}
+
+RUNS: dict[str, dict[str, Any]] = {}
+RUNS_LOCK = threading.Lock()
+RUNS_MAX = 100
 
 
 ROUTE_RULES: list[dict[str, Any]] = [
@@ -143,6 +176,68 @@ def log_event(event: str, **fields: Any) -> None:
             continue
         safe[key] = value if isinstance(value, (str, int, float, bool)) else str(value)
     print(f"[image-bridge-json] {json.dumps(safe, ensure_ascii=False)}", file=sys.stderr, flush=True)
+
+
+def virtual_mode_for_model(model: str) -> str:
+    return VIRTUAL_MODELS.get(model, {}).get("mode", "auto")
+
+
+def model_list_payload() -> dict[str, Any]:
+    now = int(dt.datetime.now(dt.UTC).timestamp())
+    data: list[dict[str, Any]] = []
+    for model_id, meta in VIRTUAL_MODELS.items():
+        data.append({
+            "id": model_id,
+            "object": "model",
+            "created": now,
+            "owned_by": "opendeepseek",
+            "name": meta["name"],
+            "description": meta["description"],
+        })
+    data.append({
+        "id": HERMES_MODEL_ID,
+        "object": "model",
+        "created": now,
+        "owned_by": "opendeepseek",
+        "name": "Hermes Agent 兼容入口",
+        "description": "兼容旧配置；新用户建议使用 opendeepseek-auto。",
+    })
+    data.append({
+        "id": DEFAULT_MODEL,
+        "object": "model",
+        "created": now,
+        "owned_by": "deepseek",
+        "name": "DeepSeek V4 Flash",
+        "description": "底层 DeepSeek 轻量模型兼容入口。",
+    })
+    return {"object": "list", "data": data}
+
+
+def set_run_state(run_id: str, status: str, **fields: Any) -> None:
+    with RUNS_LOCK:
+        current = RUNS.get(run_id, {})
+        current.update({
+            "run_id": run_id,
+            "status": status,
+            "updated_at": dt.datetime.now(dt.UTC).isoformat(),
+            **fields,
+        })
+        current.setdefault("created_at", current["updated_at"])
+        RUNS[run_id] = current
+        while len(RUNS) > RUNS_MAX:
+            oldest = sorted(RUNS.items(), key=lambda item: str(item[1].get("updated_at", "")))[0][0]
+            RUNS.pop(oldest, None)
+
+
+def get_run_state(run_id: str) -> dict[str, Any] | None:
+    with RUNS_LOCK:
+        run = RUNS.get(run_id)
+        return dict(run) if run else None
+
+
+def list_run_states() -> list[dict[str, Any]]:
+    with RUNS_LOCK:
+        return sorted((dict(run) for run in RUNS.values()), key=lambda item: str(item.get("updated_at", "")), reverse=True)
 
 
 def now_slug() -> str:
@@ -361,6 +456,17 @@ def should_route_to_hermes(payload: dict[str, Any], image_count: int) -> tuple[b
     return False, "simple-chat"
 
 
+def route_for_model(payload: dict[str, Any], image_count: int, requested_model: str) -> tuple[bool, str]:
+    mode = virtual_mode_for_model(requested_model)
+    if mode == "fast" and not image_count:
+        return False, "forced-fast-model"
+    if mode == "agent":
+        return True, "forced-agent-model"
+    if mode == "deepwork":
+        return True, "deepwork-model"
+    return should_route_to_hermes(payload, image_count)
+
+
 def classify_text_route(text: str) -> str | None:
     for index, rule in enumerate(ROUTE_RULES):
         for pattern in rule["patterns"]:
@@ -375,8 +481,9 @@ def route_prompt_for_testing(
     has_tools: bool = False,
     lightweight: bool = True,
     has_deepseek_key: bool = True,
+    model: str = "opendeepseek-auto",
 ) -> dict[str, str]:
-    payload: dict[str, Any] = {"messages": [{"role": "user", "content": text}]}
+    payload: dict[str, Any] = {"model": model, "messages": [{"role": "user", "content": text}]}
     if has_tools:
         payload["tools"] = [{"type": "function", "function": {"name": "dummy", "parameters": {}}}]
 
@@ -385,7 +492,7 @@ def route_prompt_for_testing(
     globals()["ENABLE_LIGHTWEIGHT_ROUTING"] = lightweight
     globals()["DEEPSEEK_API_KEY"] = "test-key" if has_deepseek_key else ""
     try:
-        route_hermes, reason = should_route_to_hermes(payload, image_count)
+        route_hermes, reason = route_for_model(payload, image_count, model)
     finally:
         globals()["ENABLE_LIGHTWEIGHT_ROUTING"] = original_lightweight
         globals()["DEEPSEEK_API_KEY"] = original_deepseek_key
@@ -524,6 +631,180 @@ def host_paths_in_text(text: str) -> list[str]:
     return paths
 
 
+def is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+    except FileNotFoundError:
+        return False
+
+
+def container_path_to_real(path: str) -> Path | None:
+    if path.startswith(PUBLIC_HOST_PREFIX + "/") or path == PUBLIC_HOST_PREFIX:
+        suffix = path.removeprefix(PUBLIC_HOST_PREFIX).lstrip("/")
+        return HOST_ROOT / suffix if suffix else HOST_ROOT
+    if path.startswith(str(HOST_ROOT)):
+        return Path(path)
+    return None
+
+
+def is_safe_artifact_file(path: Path) -> bool:
+    unsafe_names = {".env", "id_rsa", "id_ed25519", "known_hosts"}
+    for part in path.parts:
+        if part.startswith("."):
+            return False
+    lower_name = path.name.lower()
+    if lower_name in unsafe_names:
+        return False
+    if any(token in lower_name for token in ("secret", "token", "apikey", "api_key", "password")):
+        return False
+    return True
+
+
+def artifact_file_entry(root: Path, file_path: Path, task_id: str) -> dict[str, Any] | None:
+    if not file_path.exists() or not file_path.is_file():
+        return None
+    if not is_relative_to(file_path, root) or not is_relative_to(file_path, OUTPUT_ROOT):
+        return None
+    rel = file_path.relative_to(root).as_posix()
+    if not rel or rel.startswith("../") or not is_safe_artifact_file(Path(rel)):
+        return None
+    mime = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    return {
+        "path": rel,
+        "mime": mime,
+        "size_bytes": file_path.stat().st_size,
+        "preview_url": f"{ARTIFACT_PUBLIC_BASE_URL}/artifacts/{task_id}/{quote(rel)}",
+    }
+
+
+def collect_artifact_files(root: Path) -> list[dict[str, Any]]:
+    files: list[dict[str, Any]] = []
+    task_id_placeholder = "TASK_ID"
+    if root.is_file():
+        entry = artifact_file_entry(root.parent, root, task_id_placeholder)
+        if entry:
+            files.append(entry)
+        return files
+
+    for file_path in root.rglob("*"):
+        if len(files) >= ARTIFACT_MAX_FILES:
+            break
+        if not file_path.is_file():
+            continue
+        if ARTIFACT_INDEX_DIR in file_path.parents:
+            continue
+        entry = artifact_file_entry(root, file_path, task_id_placeholder)
+        if entry:
+            files.append(entry)
+    return files
+
+
+def manifest_title(root: Path, files: list[dict[str, Any]]) -> str:
+    if root.name:
+        return root.name
+    if files:
+        return Path(str(files[0].get("path", "artifact"))).stem or "OpenDeepSeek 产物"
+    return "OpenDeepSeek 产物"
+
+
+def write_artifact_manifest(response_text: str, route_reason: str, request_id: str) -> dict[str, Any] | None:
+    paths = host_paths_in_text(response_text)
+    if not paths:
+        return None
+
+    roots: list[Path] = []
+    for path_text in paths:
+        real_path = container_path_to_real(path_text)
+        if not real_path or not real_path.exists():
+            continue
+        root = real_path if real_path.is_dir() else real_path.parent
+        if not is_relative_to(root, OUTPUT_ROOT):
+            continue
+        if root not in roots:
+            roots.append(root)
+
+    if not roots:
+        return None
+
+    root = roots[0]
+    task_id = f"{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}-{request_id}"
+    files = collect_artifact_files(root)
+    if not files:
+        return None
+    for item in files:
+        item["preview_url"] = item["preview_url"].replace("TASK_ID", task_id)
+
+    container_root = public_path(root)
+    manifest = {
+        "schema_version": 1,
+        "task_id": task_id,
+        "title": manifest_title(root, files),
+        "type": "artifact",
+        "route": route_reason,
+        "created_at": dt.datetime.now(dt.UTC).isoformat(),
+        "container_root": container_root,
+        "local_root": host_path_to_local(container_root),
+        "files": files,
+        "manifest_url": f"{ARTIFACT_PUBLIC_BASE_URL}/artifacts/{task_id}/manifest.json",
+    }
+
+    manifest_dir = ARTIFACT_INDEX_DIR / task_id
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    (manifest_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    log_event("artifact_manifest_created", task_id=task_id, root=container_root, files=len(files))
+    return manifest
+
+
+def artifact_card_markdown(manifest: dict[str, Any]) -> str:
+    files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
+    first_preview = ""
+    if files and isinstance(files[0], dict):
+        first_preview = str(files[0].get("preview_url") or "")
+    lines = [
+        "",
+        "",
+        "OpenDeepSeek 产物卡片：",
+        f"- 标题：{manifest.get('title', 'OpenDeepSeek 产物')}",
+        f"- 本机路径：`{manifest.get('local_root', '')}`",
+        f"- 容器路径：`{manifest.get('container_root', '')}`",
+    ]
+    if first_preview:
+        lines.append(f"- 预览：{first_preview}")
+    manifest_url = manifest.get("manifest_url")
+    if manifest_url:
+        lines.append(f"- Manifest：{manifest_url}")
+    if files:
+        lines.append("- 文件：")
+        for item in files[:8]:
+            if isinstance(item, dict):
+                lines.append(f"  - `{item.get('path')}` ({item.get('mime')}, {item.get('size_bytes')} bytes)")
+        if len(files) > 8:
+            lines.append(f"  - 还有 {len(files) - 8} 个文件，见 manifest")
+    return "\n".join(lines)
+
+
+def append_artifact_card(text: str, route_reason: str, request_id: str) -> str:
+    if "OpenDeepSeek 产物卡片" in text:
+        return text
+    manifest = write_artifact_manifest(text, route_reason, request_id)
+    if not manifest:
+        return text
+    return text.rstrip() + artifact_card_markdown(manifest)
+
+
+def augment_assistant_text(text: str, upstream_name: str, route_reason: str, request_id: str) -> str:
+    if upstream_name != "hermes":
+        return text
+    updated = append_path_notes(text)
+    return append_artifact_card(updated, route_reason, request_id)
+
+
 def append_path_notes(text: str) -> str:
     if "本机可找路径" in text or "file://" in text:
         return text
@@ -544,7 +825,7 @@ def append_path_notes(text: str) -> str:
     return text.rstrip() + "\n".join(lines)
 
 
-def augment_openai_response(content: bytes, upstream_name: str) -> bytes:
+def augment_openai_response(content: bytes, upstream_name: str, route_reason: str = "", request_id: str = "") -> bytes:
     if upstream_name != "hermes":
         return content
     try:
@@ -562,7 +843,7 @@ def augment_openai_response(content: bytes, upstream_name: str) -> bytes:
                 continue
             text = message.get("content")
             if isinstance(text, str):
-                updated = append_path_notes(text)
+                updated = augment_assistant_text(text, upstream_name, route_reason, request_id)
                 if updated != text:
                     message["content"] = updated
                     changed = True
@@ -571,9 +852,9 @@ def augment_openai_response(content: bytes, upstream_name: str) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
-def extract_openai_message_content(content: bytes, upstream_name: str) -> str:
+def extract_openai_message_content(content: bytes, upstream_name: str, route_reason: str = "", request_id: str = "") -> str:
     try:
-        payload = json.loads(augment_openai_response(content, upstream_name).decode("utf-8"))
+        payload = json.loads(augment_openai_response(content, upstream_name, route_reason, request_id).decode("utf-8"))
     except Exception:
         return content.decode("utf-8", errors="replace")
     choices = payload.get("choices")
@@ -595,6 +876,12 @@ def human_route_reason(reason: str) -> str:
     label = reason.split(":", 1)[0]
     if label == "image":
         return "图片/OCR 任务"
+    if reason == "forced-fast-model":
+        return "极速问答模式"
+    if reason == "forced-agent-model":
+        return "真 Agent 模式"
+    if reason == "deepwork-model":
+        return "深度任务模式"
     if reason in {"explicit-tools", "forced-agent"}:
         return "用户明确要求工具/Agent 能力"
     if reason == "openwebui-native-tools":
@@ -660,6 +947,7 @@ def hermes_system_message(payload: dict[str, Any], reason: str) -> dict[str, str
 
 def prepare_hermes_payload(payload: dict[str, Any], reason: str) -> tuple[bytes, bool]:
     agent = dict(payload)
+    agent["model"] = HERMES_MODEL_ID
     requested_tokens = agent.get("max_tokens")
     if not isinstance(requested_tokens, int) or requested_tokens < HERMES_AGENT_MAX_TOKENS:
         agent["max_tokens"] = HERMES_AGENT_MAX_TOKENS
@@ -690,9 +978,23 @@ class BridgeHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path.rstrip("/") in {"/v1/models", "/models"}:
+            self.send_json(200, model_list_payload())
+            return
+        if parsed.path == "/artifacts" or parsed.path.startswith("/artifacts/"):
+            self.handle_artifact_get(parsed.path)
+            return
+        if parsed.path == "/runs" or parsed.path.startswith("/runs/"):
+            self.handle_run_get(parsed.path)
+            return
         self.proxy()
 
     def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/runs/") and parsed.path.endswith("/stop"):
+            self.handle_run_stop(parsed.path)
+            return
         self.proxy()
 
     def do_OPTIONS(self) -> None:  # noqa: N802
@@ -722,6 +1024,124 @@ class BridgeHandler(BaseHTTPRequestHandler):
         else:
             data = f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode("utf-8")
         return self.write_chunk(data)
+
+    def send_json(self, status: int, payload: dict[str, Any] | list[Any]) -> None:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def load_manifest(self, task_id: str) -> dict[str, Any] | None:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{8,80}", task_id):
+            return None
+        path = ARTIFACT_INDEX_DIR / task_id / "manifest.json"
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def list_artifact_manifests(self) -> list[dict[str, Any]]:
+        if not ARTIFACT_INDEX_DIR.exists():
+            return []
+        manifests: list[dict[str, Any]] = []
+        for path in sorted(ARTIFACT_INDEX_DIR.glob("*/manifest.json"), reverse=True):
+            try:
+                manifest = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            manifests.append({
+                "task_id": manifest.get("task_id"),
+                "title": manifest.get("title"),
+                "created_at": manifest.get("created_at"),
+                "local_root": manifest.get("local_root"),
+                "container_root": manifest.get("container_root"),
+                "files": manifest.get("files", [])[:8] if isinstance(manifest.get("files"), list) else [],
+                "manifest_url": manifest.get("manifest_url"),
+            })
+            if len(manifests) >= 50:
+                break
+        return manifests
+
+    def handle_artifact_get(self, path: str) -> None:
+        parts = [part for part in path.split("/") if part]
+        if len(parts) == 1:
+            self.send_json(200, {"artifacts": self.list_artifact_manifests()})
+            return
+        if len(parts) < 2:
+            self.send_json(404, {"error": "artifact not found"})
+            return
+
+        task_id = parts[1]
+        manifest = self.load_manifest(task_id)
+        if not manifest:
+            self.send_json(404, {"error": "artifact not found"})
+            return
+
+        if len(parts) == 2 or (len(parts) == 3 and parts[2] == "manifest.json"):
+            self.send_json(200, manifest)
+            return
+
+        rel_path = unquote("/".join(parts[2:]))
+        rel = Path(rel_path)
+        if rel.is_absolute() or ".." in rel.parts or not is_safe_artifact_file(rel):
+            self.send_json(403, {"error": "forbidden artifact path"})
+            return
+
+        allowed = {
+            str(item.get("path"))
+            for item in manifest.get("files", [])
+            if isinstance(item, dict) and item.get("path")
+        }
+        if rel.as_posix() not in allowed:
+            self.send_json(404, {"error": "file not listed in manifest"})
+            return
+
+        root = container_path_to_real(str(manifest.get("container_root") or ""))
+        if not root:
+            self.send_json(404, {"error": "artifact root unavailable"})
+            return
+        target = (root / rel).resolve()
+        if not target.exists() or not target.is_file() or not is_relative_to(target, OUTPUT_ROOT):
+            self.send_json(404, {"error": "file not found"})
+            return
+
+        data = target.read_bytes()
+        content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def handle_run_get(self, path: str) -> None:
+        parts = [part for part in path.split("/") if part]
+        if len(parts) == 1:
+            self.send_json(200, {"runs": list_run_states()})
+            return
+        run = get_run_state(parts[1])
+        if not run:
+            self.send_json(404, {"error": "run not found"})
+            return
+        self.send_json(200, run)
+
+    def handle_run_stop(self, path: str) -> None:
+        parts = [part for part in path.split("/") if part]
+        if len(parts) < 2:
+            self.send_json(404, {"error": "run not found"})
+            return
+        run_id = parts[1]
+        run = get_run_state(run_id)
+        if not run:
+            self.send_json(404, {"error": "run not found"})
+            return
+        set_run_state(run_id, "stop_requested", note="第一版只记录停止请求；不会强杀已发出的上游请求。")
+        self.send_json(202, get_run_state(run_id) or {"run_id": run_id, "status": "stop_requested"})
 
     def sse_chunk(self, stream_id: str, model: str, content: str = "", role: str | None = None, finish_reason: str | None = None) -> dict[str, Any]:
         delta: dict[str, str] = {}
@@ -754,6 +1174,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.send_header("X-Accel-Buffering", "no")
         self.send_header("X-OpenDeepSeek-Request-Id", request_id)
+        self.send_header("X-OpenDeepSeek-Run-Id", request_id)
         self.send_header("X-OpenDeepSeek-Route", "hermes")
         self.send_header("X-OpenDeepSeek-Route-Reason", route_reason_header(reason))
         self.send_header("Transfer-Encoding", "chunked")
@@ -776,6 +1197,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             )
             if response.status_code >= 400:
                 final_text = friendly_upstream_error("hermes", response.text, response.status_code)
+                set_run_state(request_id, "error", status=response.status_code, error=response.text[:500])
                 log_event(
                     "upstream_error",
                     request_id=request_id,
@@ -785,9 +1207,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     duration_ms=round((time.perf_counter() - started) * 1000, 1),
                 )
             else:
-                final_text = extract_openai_message_content(response.content, "hermes")
+                final_text = extract_openai_message_content(response.content, "hermes", reason, request_id)
+                set_run_state(request_id, "completed", status=response.status_code)
         except Exception as exc:  # noqa: BLE001
             final_text = friendly_upstream_error("hermes", str(exc))
+            set_run_state(request_id, "error", error=str(exc)[:500], error_type=type(exc).__name__)
             log_event(
                 "upstream_exception",
                 request_id=request_id,
@@ -867,9 +1291,17 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     route_hermes = True
                     reason = "non-chat"
                     if self.path.rstrip("/") == "/v1/chat/completions" and isinstance(payload, dict):
-                        route_hermes, reason = should_route_to_hermes(payload, image_count)
+                        route_hermes, reason = route_for_model(payload, image_count, requested_model)
                     route_reason = reason
                     if route_hermes:
+                        set_run_state(
+                            request_id,
+                            "running",
+                            route="hermes",
+                            reason=reason,
+                            model=requested_model,
+                            path=self.path,
+                        )
                         body_bytes, stream_response = prepare_hermes_payload(payload, reason)
                         progress_stream = (
                             self.path.rstrip("/") == "/v1/chat/completions"
@@ -918,6 +1350,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 timeout=REQUEST_TIMEOUT,
             )
         except Exception as exc:  # noqa: BLE001
+            if upstream_name == "hermes":
+                set_run_state(request_id, "error", error=str(exc)[:500], error_type=type(exc).__name__)
             log_event(
                 "upstream_exception",
                 request_id=request_id,
@@ -930,6 +1364,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self.send_response(502)
             self.send_header("Content-Type", "application/json")
             self.send_header("X-OpenDeepSeek-Request-Id", request_id)
+            self.send_header("X-OpenDeepSeek-Run-Id", request_id)
             self.send_header("X-OpenDeepSeek-Route", upstream_name)
             self.send_header("X-OpenDeepSeek-Route-Reason", route_reason_header(route_reason))
             self.send_header("Content-Length", str(len(body)))
@@ -940,6 +1375,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
         if not stream_response:
             if response.status_code >= 400:
                 raw_error = response.text[:1200]
+                if upstream_name == "hermes":
+                    set_run_state(request_id, "error", status=response.status_code, error=raw_error[:500])
                 content = json.dumps(
                     {"error": friendly_upstream_error(upstream_name, raw_error, response.status_code)},
                     ensure_ascii=False,
@@ -953,13 +1390,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     duration_ms=round((time.perf_counter() - started) * 1000, 1),
                 )
             else:
-                content = augment_openai_response(response.content, upstream_name)
+                content = augment_openai_response(response.content, upstream_name, route_reason, request_id)
+                if upstream_name == "hermes":
+                    set_run_state(request_id, "completed", status=response.status_code)
             self.send_response(response.status_code)
             for key, value in response.headers.items():
                 if key.lower() in hop_by_hop_headers():
                     continue
                 self.send_header(key, value)
             self.send_header("X-OpenDeepSeek-Request-Id", request_id)
+            self.send_header("X-OpenDeepSeek-Run-Id", request_id)
             self.send_header("X-OpenDeepSeek-Route", upstream_name)
             self.send_header("X-OpenDeepSeek-Route-Reason", route_reason_header(route_reason))
             self.send_header("Content-Length", str(len(content)))
@@ -983,6 +1423,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 continue
             self.send_header(key, value)
         self.send_header("X-OpenDeepSeek-Request-Id", request_id)
+        self.send_header("X-OpenDeepSeek-Run-Id", request_id)
         self.send_header("X-OpenDeepSeek-Route", upstream_name)
         self.send_header("X-OpenDeepSeek-Route-Reason", route_reason_header(route_reason))
         self.send_header("Transfer-Encoding", "chunked")
@@ -1004,6 +1445,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self.wfile.flush()
         except BrokenPipeError:
             log(f"client disconnected at end of {upstream_name} stream")
+        if upstream_name == "hermes":
+            set_run_state(request_id, "completed", status=response.status_code)
         log_event(
             "request_complete",
             request_id=request_id,
@@ -1017,10 +1460,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    ARTIFACT_INDEX_DIR.mkdir(parents=True, exist_ok=True)
     routing = "on" if ENABLE_LIGHTWEIGHT_ROUTING and DEEPSEEK_API_KEY else "off"
     log(
         f"listening on {LISTEN_HOST}:{LISTEN_PORT}; hermes={HERMES_BASE_URL}; "
-        f"deepseek={DEEPSEEK_BASE_URL}; lite-routing={routing}; upload_root={UPLOAD_ROOT}"
+        f"deepseek={DEEPSEEK_BASE_URL}; lite-routing={routing}; upload_root={UPLOAD_ROOT}; "
+        f"artifact_root={OUTPUT_ROOT}; artifact_base={ARTIFACT_PUBLIC_BASE_URL}"
     )
     server = ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), BridgeHandler)
     server.serve_forever()

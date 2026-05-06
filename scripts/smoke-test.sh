@@ -28,7 +28,7 @@ echo "   OpenDeepSeek Smoke Test (v0.4.3 - Smart Bridge 架构)"
 echo "════════════════════════════════════════════"
 echo ""
 
-info "[0/11] 离线路由回归（不消耗 API）"
+info "[0/12] 离线路由回归（不消耗 API）"
 if python3 scripts/benchmark_routing.py > /tmp/opds-routing-benchmark.txt 2>&1; then
     ok "离线路由回归通过"
 else
@@ -37,7 +37,7 @@ else
 fi
 
 # 1. .env 存在
-info "[1/11] 检查 .env 文件"
+info "[1/12] 检查 .env 文件"
 if [[ -f .env ]] && grep -v '^\s*#' .env | grep -qE "^DEEPSEEK_API_KEY[[:space:]]*=" && ! grep -q "DEEPSEEK_API_KEY=your-deepseek-api-key-here" .env; then
     ok ".env 配置完毕"
 else
@@ -52,7 +52,7 @@ else
 fi
 
 # 2. 三个容器状态（hermes + hermes-bridge + open-webui）
-info "[2/11] 检查容器状态"
+info "[2/12] 检查容器状态"
 RUNNING=$(docker compose ps --status running --format json 2>/dev/null)
 if echo "$RUNNING" | grep -q opendeepseek-hermes; then
     ok "hermes 容器运行中"
@@ -74,7 +74,7 @@ else
 fi
 
 # 3. Hermes 健康端点
-info "[3/11] 检查 Hermes 健康端点"
+info "[3/12] 检查 Hermes 健康端点"
 if curl -fsS http://localhost:8642/health > /dev/null 2>&1; then
     ok "Hermes /health 返回 OK"
 else
@@ -82,7 +82,7 @@ else
 fi
 
 # 4. Smart Bridge 健康端点
-info "[4/11] 检查 Hermes Smart Bridge 健康端点"
+info "[4/12] 检查 Hermes Smart Bridge 健康端点"
 if docker compose exec -T hermes-bridge python -c "import urllib.request; urllib.request.urlopen('http://localhost:8765/health')" > /dev/null 2>&1; then
     ok "hermes-bridge /health 返回 OK"
 else
@@ -90,7 +90,7 @@ else
 fi
 
 # 5. Open WebUI 可达
-info "[5/11] 检查 Open WebUI 网页"
+info "[5/12] 检查 Open WebUI 网页"
 if curl -fsS http://localhost:3000 > /dev/null 2>&1; then
     ok "Open WebUI :3000 可访问"
 else
@@ -98,7 +98,7 @@ else
 fi
 
 # 6. Hermes 模型列表（应该暴露 hermes-agent）
-info "[6/11] 检查 Hermes 暴露的模型"
+info "[6/12] 检查 Hermes 暴露的模型"
 HERMES_KEY=$(grep -m1 "^HERMES_API_KEY=" .env | cut -d'=' -f2- | sed -E 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^["'"'"']|["'"'"']$//g')
 MODELS_RESP=$(curl -fsS http://localhost:8642/v1/models -H "Authorization: Bearer ${HERMES_KEY}" 2>&1 || echo "FAIL")
 if echo "$MODELS_RESP" | grep -q "hermes-agent"; then
@@ -110,7 +110,7 @@ fi
 
 # 7. 真实端到端：普通问答 → Bridge → DeepSeek 轻量路径
 # 这是项目核心架构验证，不能假阳性
-info "[7/11] 真实端到端：Smart Bridge → DeepSeek 轻量问答"
+info "[7/12] 真实端到端：Smart Bridge → DeepSeek 轻量问答"
 TMP_RESP=$(mktemp)
 docker compose exec -T -e HERMES_KEY="${HERMES_KEY}" hermes-bridge python - <<'PY' > "$TMP_RESP" 2>&1 || echo "FAIL"
 import json
@@ -150,7 +150,7 @@ else
 fi
 
 # 8. Open WebUI 入口 → Bridge → DeepSeek。防止压缩响应或模型代理问题导致前端显示 Server Connection Error。
-info "[8/11] 真实端到端：Open WebUI → Smart Bridge → DeepSeek"
+info "[8/12] 真实端到端：Open WebUI → Smart Bridge → DeepSeek"
 WEBUI_AUTH_MODE=$(grep -m1 "^WEBUI_AUTH=" .env | cut -d'=' -f2- | tr -d '[:space:]"'"'"'' || true)
 if [[ "${WEBUI_AUTH_MODE:-false}" == "false" ]]; then
     WEBUI_TOKEN=$(curl -fsS -X POST http://localhost:3000/api/v1/auths/signin \
@@ -183,7 +183,7 @@ else
 fi
 
 # 9. 实时资讯 / 搜索类请求必须进 Hermes，并先给用户进度提示
-info "[9/11] 验证实时资讯类请求路由到 Hermes，并先返回进度提示"
+info "[9/12] 验证实时资讯类请求路由到 Hermes，并先返回进度提示"
 TMP_ROUTE=$(mktemp)
 docker compose exec -T -e HERMES_KEY="${HERMES_KEY}" hermes-bridge python - <<'PY' > "$TMP_ROUTE" 2>&1 || echo "FAIL"
 import json
@@ -220,7 +220,7 @@ else
 fi
 
 # 10. Hermes Skills 激活验证（Cron）
-info "[10/11] 验证 Hermes Skills 是否激活（Cron skill）"
+info "[10/12] 验证 Hermes Skills 是否激活（Cron skill）"
 TMP_CRON=$(mktemp)
 curl -fsS http://localhost:8642/v1/chat/completions \
     -H "Authorization: Bearer ${HERMES_KEY}" \
@@ -243,7 +243,7 @@ else
 fi
 
 # 11. 真 Agent 文件系统权限：/host 是否挂载，Bridge 是否能把任务路由到 Hermes 并实际写文件
-info "[11/11] 验证 Smart Bridge → Hermes 本机文件系统权限（/host）"
+info "[11/12] 验证 Smart Bridge → Hermes 本机文件系统权限（/host）"
 if docker compose exec -T hermes test -d /host; then
     ok "Hermes 容器已挂载 /host"
 else
@@ -293,6 +293,20 @@ if [[ -n "$HOST_DISPLAY_PREFIX" ]] && [[ "$HOST_DISPLAY_PREFIX" != "/host" ]]; t
         echo "    期望包含: $HOST_DISPLAY_PREFIX/OpenDeepSeek-Outputs/smoke-agent-route.txt"
         echo "    回复: $(echo "$HOST_REPLY" | head -c 300)"
     fi
+fi
+
+# 12. Artifact Manifest：真文件任务应该生成产物卡片，并能从本机只读预览端点列出
+info "[12/12] 验证 Artifact Manifest 与本机只读预览服务"
+ARTIFACT_PORT=$(grep -m1 "^OPDS_ARTIFACT_PORT=" .env | cut -d'=' -f2- | tr -d '[:space:]"'"'"'' || true)
+ARTIFACT_PORT=${ARTIFACT_PORT:-8770}
+ARTIFACTS_JSON=$(curl -fsS "http://localhost:${ARTIFACT_PORT}/artifacts" 2>&1 || echo "FAIL")
+if echo "$HOST_REPLY" | grep -Fq "OpenDeepSeek 产物卡片" \
+    && echo "$ARTIFACTS_JSON" | grep -Fq "smoke-agent-route.txt"; then
+    ok "Artifact Manifest 已生成，预览服务能列出 smoke 产物"
+else
+    fail "Artifact Manifest 或预览服务未正确生成 smoke 产物"
+    echo "    HOST_REPLY: $(echo "$HOST_REPLY" | head -c 300)"
+    echo "    ARTIFACTS: $(echo "$ARTIFACTS_JSON" | head -c 300)"
 fi
 
 echo ""

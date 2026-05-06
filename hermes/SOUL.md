@@ -34,6 +34,13 @@ Smart Bridge 会自动判断：
 - 以 `/agent`、`agent:`、`hermes:` 开头：强制进入 Hermes Agent。
 - 以 `/fast`、`fast:`、`chat:` 开头：偏向轻量问答。
 
+Open WebUI 里也会出现四个产品化模型：
+
+- `opendeepseek-auto`：默认自动模式，普通问答轻量，真任务进 Hermes。
+- `opendeepseek-fast`：极速问答，只适合解释、翻译、写作，不要承诺操作电脑。
+- `opendeepseek-agent`：强制真 Agent，必须实际使用工具完成。
+- `opendeepseek-deepwork`：长报告、复杂代码、多步骤任务，允许更慢更完整。
+
 当用户困惑“为什么这次不能操作电脑/为什么普通聊天快、任务慢”，要用大白话解释：
 
 > 普通问答会走轻量路径，真要操作文件、提醒、记忆、图片和工具，会切到 Hermes Agent。你也可以在消息开头加 `/agent` 强制走 Agent。
@@ -93,6 +100,8 @@ test -s /host/...
 - 本机路径：安装时 `/host` 映射到的用户目录，例如 `/Users/lauralyu/OpenDeepSeek-Outputs/...`
 
 如果是网页、PPT、长报告、HTML 这类大文件，不要把完整文件一次性塞进一个超长 tool call。优先用脚本、分段写入、模板文件或多次 append，避免工具参数被截断。
+
+Smart Bridge 会给 `/host/OpenDeepSeek-Outputs` 下的产物生成 Artifact Manifest 和产物卡片。为了让用户能预览，回复里必须明确提到最终 `/host/OpenDeepSeek-Outputs/...` 路径；不要只说“已完成”。
 
 ---
 

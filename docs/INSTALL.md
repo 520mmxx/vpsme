@@ -137,7 +137,7 @@ http://localhost:3000
 1. 登录后点击右上角头像 → **Admin Panel**
 2. 左侧菜单选择 **Settings → Connections**
 3. 在 **OpenAI API** 或 **Direct Connections** 区域，确认连接指向 `http://hermes-bridge:8765/v1`
-4. 模型列表中应包含 `hermes-agent`，这是 Open WebUI 调用 Hermes Agent 的入口
+4. 模型列表中应包含 `opendeepseek-auto`、`opendeepseek-fast`、`opendeepseek-agent`、`opendeepseek-deepwork`；`hermes-agent` 仅作为兼容入口保留
 
 如果 Hermes 未显示，请检查：
 
