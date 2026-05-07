@@ -67,8 +67,9 @@ ok "Gitee ${TARGET_BRANCH} = ${remote_sha:0:7}"
 
 log "校验 Gitee raw installer..."
 tmp="$(mktemp)"
-code="$(curl -L -sS -o "$tmp" -w '%{http_code}' --connect-timeout 8 --max-time 30 "$GITEE_RAW_URL" 2>/dev/null || true)"
-if [[ "$code" != "200" ]] || ! grep -q "OpenDeepSeek CN smart installer" "$tmp"; then
+if ! curl -L -sS -o "$tmp" --connect-timeout 8 --max-time 30 "$GITEE_RAW_URL" 2>/dev/null \
+  || ! grep -q "OpenDeepSeek CN smart installer" "$tmp"; then
+  code="$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 30 "$GITEE_RAW_URL" 2>/dev/null || true)"
   rm -f "$tmp"
   die "Gitee raw install-cn.sh 不可用：HTTP ${code:-000} ${GITEE_RAW_URL}"
 fi
