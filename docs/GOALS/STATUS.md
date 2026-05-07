@@ -611,3 +611,43 @@ Pushed:
 Next:
 
 - Replace the local DeepSeek key via Portal or `.env`, then run `./setup.sh verify-live`, `./scripts/creator-demo.sh`, and `./scripts/release-gate.sh --full`.
+
+## 2026-05-07 - New DeepSeek Key Live Validation + E2E Benchmark
+
+Status: done - local stack and public GitHub/Gitee code are launch-ready for the current lightweight OpenDeepSeek path.
+
+What changed:
+
+- Updated local `.env` only with a fresh DeepSeek V4 Flash API key. `.env` remains untracked and was not committed.
+- Restarted the lightweight stack so Hermes and Smart Bridge read the new provider credentials.
+- Hardened `scripts/creator-demo.sh` with retrying Gitee checks after one transient Gitee HTTP `000` failure.
+
+Validation:
+
+- `./setup.sh verify-live`: PASS - Provider returned content from `deepseek-v4-flash`
+- `./scripts/health-check.sh`: PASS - `overall=ok`
+- `./scripts/sync-gitee.sh --verify-only`: PASS - Gitee main matches local HEAD and raw installer content verified
+- `./scripts/creator-demo.sh`: PASS - 8/8 checks passed, including Gitee raw, Docker stack, DeepSeek API, fast route, Hermes file write, Cron skill, and Portal
+- `./scripts/release-gate.sh --full`: PASS - 28 passed, 0 failed, 0 warnings, 0 skipped
+- `python3 scripts/agent-e2e-benchmark.py`: PASS - 10/10 conversations, 30 turns, 0 failed, average latency 10.9s, p95 65.4s
+
+Benchmark artifacts:
+
+- Report: `benchmark-results/agent-e2e-20260507-141032.json`
+- Generated files under `/host/OpenDeepSeek-Outputs/benchmark`:
+  - `session03.txt`
+  - `site-demo/index.html`
+  - `weekly-report.md`
+  - `video-script.md`
+  - `desktop-plan.md`
+
+Pushed:
+
+- GitHub `main`: synced to local HEAD
+- Gitee `main`: synced to local HEAD
+
+Remaining release follow-ups:
+
+- GitCode mirror is still a follow-up.
+- Domestic container images and OSS/COS offline bundles are still follow-ups before claiming full China Ready.
+- Public/cloud deployment still requires `WEBUI_AUTH=true`, HTTPS/reverse proxy, and no unauthenticated public Hermes/Bridge exposure.
