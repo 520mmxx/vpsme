@@ -557,7 +557,7 @@ raw check: https://gitee.com/luoxueai/opendeepseek/raw/main/install-cn.sh
 
 ## 2026-05-07 - Full-Chain OpenClaw Review + Landing Hardening
 
-Status: in progress - code hardening implemented; live end-to-end demo is blocked by invalid DeepSeek API key in local `.env`
+Status: done - code hardening implemented and pushed to GitHub/Gitee; live end-to-end demo is blocked only by invalid DeepSeek API key in local `.env`
 
 Sidecars:
 
@@ -592,12 +592,19 @@ Validation so far:
 - `python3 -m py_compile scripts/provider-live-check.py scripts/verify_config.py scripts/doctor.py bridge/hermes_image_bridge.py`: PASS
 - `python3 scripts/benchmark_routing.py`: PASS - 56/56, F1=1.00
 - `./scripts/health-check.sh`: PASS - `overall=ok`
-- `./scripts/sync-gitee.sh --verify-only`: PASS - Gitee `main=b56d3ed`, raw installer HTTP 200
+- `./scripts/sync-gitee.sh --verify-only`: PASS - Gitee `main=679ca9f`, raw installer content verified
 - `./setup.sh verify`: PASS - 0 errors, 1 expected SearXNG warning
 - `docker compose config -q`: PASS
 - `docker compose -f docker-compose.cn.yml config -q`: PASS
 - `./setup.sh verify-live`: FAIL as expected with current local `.env` - DeepSeek HTTP 401, configured API key is invalid
 - `./scripts/creator-demo.sh`: FAIL at step 4 for the same DeepSeek HTTP 401; steps 1-3 pass (GitHub sync, Gitee project/raw, Docker stack)
+- `./scripts/release-gate.sh`: PASS - 27 passed, 0 failed, 1 skipped
+- `./scripts/goal-check.sh`: PASS - 28 passed, 0 failed, 2 skipped
+
+Pushed:
+
+- GitHub `main`: `679ca9f`
+- Gitee `main`: `679ca9f`
 
 Next:
 
