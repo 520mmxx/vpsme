@@ -568,6 +568,8 @@ Changed files:
 - `scripts/health-check.sh`
 - `scripts/sync-gitee.sh`
 - `scripts/creator-demo.sh`
+- `scripts/provider-live-check.py`
+- `setup.sh`
 - `install-cn.sh`
 - `scripts/check-network-cn.sh`
 - `README.md`
@@ -592,7 +594,7 @@ Validation so far:
 - `python3 -m py_compile scripts/provider-live-check.py scripts/verify_config.py scripts/doctor.py bridge/hermes_image_bridge.py`: PASS
 - `python3 scripts/benchmark_routing.py`: PASS - 56/56, F1=1.00
 - `./scripts/health-check.sh`: PASS - `overall=ok`
-- `./scripts/sync-gitee.sh --verify-only`: PASS - Gitee `main=679ca9f`, raw installer content verified
+- `./scripts/sync-gitee.sh --verify-only`: PASS - Gitee `main=412a53c`, raw installer content verified
 - `./setup.sh verify`: PASS - 0 errors, 1 expected SearXNG warning
 - `docker compose config -q`: PASS
 - `docker compose -f docker-compose.cn.yml config -q`: PASS
@@ -603,8 +605,8 @@ Validation so far:
 
 Pushed:
 
-- GitHub `main`: `679ca9f`
-- Gitee `main`: `679ca9f`
+- GitHub `main`: `412a53c`
+- Gitee `main`: `412a53c`
 
 Next:
 
