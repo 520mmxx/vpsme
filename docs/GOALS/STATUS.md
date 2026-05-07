@@ -554,3 +554,44 @@ https://gitee.com/luoxueai/opendeepseek
 source: https://github.com/mouxue56-debug/opendeepseek
 raw check: https://gitee.com/luoxueai/opendeepseek/raw/main/install-cn.sh
 ```
+
+## 2026-05-07 - Full-Chain OpenClaw Review + Landing Hardening
+
+Status: in progress
+
+Sidecars:
+
+- Qwen3.6, Kimi K2.6, and MiMo 2.5 Pro each performed a full-chain review of install, Gitee, startup, routing, Hermes, artifact, video preflight, and China-ready release. Codex retained final judgment and only implemented low-risk changes.
+
+Changed files:
+
+- `scripts/health-check.sh`
+- `scripts/sync-gitee.sh`
+- `scripts/creator-demo.sh`
+- `install-cn.sh`
+- `scripts/check-network-cn.sh`
+- `README.md`
+- `docs/zh-CN/视频拍摄检查清单.md`
+- `docs/zh-CN/新用户安装实测报告.md`
+- `docs/zh-CN/04-国内网络问题.md`
+- `docs/zh-CN/README.md`
+
+What changed:
+
+- Added a unified JSON health check for Open WebUI, Bridge, Hermes, and Artifact listing.
+- Added a Gitee sync helper that pushes current HEAD with `GITEE_TOKEN` from the environment, verifies remote branch SHA, and verifies `raw/main/install-cn.sh`.
+- `creator-demo.sh` now fails if tracked files are dirty, verifies Gitee raw installer, and prints a video-ready endpoint summary after all checks pass.
+- `install-cn.sh` now reports line-level failure context and only treats a repo as reachable if `main` or `master` actually exists.
+- `scripts/check-network-cn.sh` now avoids false-positive Git repo checks by requiring real `main` or `master` refs.
+- Docs now reflect that Gitee raw is active while GitCode, domestic images, and offline bundles remain release follow-ups.
+
+Validation so far:
+
+- `bash -n install-cn.sh install-cn.ps1 setup.sh OpenDeepSeek.command scripts/*.sh`: PASS
+- `python3 scripts/benchmark_routing.py`: PASS - 56/56, F1=1.00
+- `./scripts/health-check.sh`: PASS - `overall=ok`
+- `./scripts/sync-gitee.sh --verify-only`: PASS - Gitee `main=b56d3ed`, raw installer HTTP 200
+
+Next:
+
+- Commit changes, push GitHub main, sync Gitee main, run `creator-demo.sh`, then run final `release-gate.sh --full`.

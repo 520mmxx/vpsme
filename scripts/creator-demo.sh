@@ -205,6 +205,9 @@ echo
 
 next_step "Git 同步"
 git fetch origin >/dev/null 2>&1 || fail "git fetch 失败" "检查网络或 GitHub 权限。"
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  fail "存在未提交的 tracked 改动" "先提交或还原改动，避免视频演示的代码和 GitHub/Gitee 不一致。"
+fi
 if [[ -n "$(git log --oneline HEAD..origin/main)" ]]; then
   fail "远端 main 比本地更新" "先检查 git log HEAD..origin/main，不要覆盖用户未确认的远端提交。"
 fi
@@ -327,3 +330,20 @@ record_step "08-portal"
 
 echo
 echo -e "${GREEN}🎬 全部就绪，开录！${NC}"
+echo
+cat <<EOF
+视频录制速览：
+- 聊天入口：http://127.0.0.1:3000
+- 中文引导：http://127.0.0.1:3001
+- Bridge/产物：http://127.0.0.1:8770
+- Hermes Agent：http://127.0.0.1:8642
+- Gitee 安装脚本：${GITEE_RAW_URL}
+- 产物目录：${host_dir%/}/OpenDeepSeek-Outputs
+
+拍摄前最后确认：
+  ./scripts/health-check.sh
+  ./setup.sh verify
+
+省内存关闭：
+  ./setup.sh stop
+EOF

@@ -18,7 +18,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/mouxue56-debug/opendeepseek/
 bash -c "$(curl -fsSL https://gitee.com/luoxueai/opendeepseek/raw/main/install-cn.sh)"
 ```
 
-当前 CN 入口已提供脚本、`docker-compose.cn.yml`、`.env.example.cn` 和网络体检骨架；正式对外宣称 China Ready 前，还需要同步 Gitee/GitCode、发布国内容器镜像和 OSS/COS 离线包。
+当前 CN 入口已提供脚本、Gitee raw 安装入口、`docker-compose.cn.yml`、`.env.example.cn` 和网络体检骨架；正式对外宣称 China Ready 前，还需要同步 GitCode、发布国内容器镜像和 OSS/COS 离线包。
 
 当前本地产品化进度：M0-M5 已落地，包含 release gate、中国版安装骨架、国内镜像/离线包脚本、中文 Portal、Artifact Manifest、四个 OpenDeepSeek 产品模式。云端发布动作仍需要维护者手动提供账号权限并确认。
 
@@ -140,6 +140,19 @@ bash scripts/smoke-test.sh
 ```
 
 `verify` 只读检查 `.env`、Docker Compose、端口、`/host` 映射和高输出预算；`doctor` 做一键诊断；`report` 生成脱敏诊断包；`benchmark_routing.py` 离线验证普通问答不会误进 Hermes、真任务不会误走普通聊天。
+
+统一健康检查：
+
+```bash
+./scripts/health-check.sh
+```
+
+Gitee 镜像同步和 raw 安装脚本校验：
+
+```bash
+GITEE_TOKEN=*** ./scripts/sync-gitee.sh
+./scripts/sync-gitee.sh --verify-only
+```
 
 ### 低内存 / 电脑变卡
 

@@ -18,6 +18,15 @@ ok() { echo -e "${GREEN}✅ $1${NC}"; }
 warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 die() { echo -e "${RED}❌ $1${NC}"; exit 1; }
 
+on_error() {
+  local code=$?
+  echo -e "${RED}❌ 安装在第 ${BASH_LINENO[0]} 行中断（退出码 ${code}）。${NC}" >&2
+  echo "可先运行：bash scripts/check-network-cn.sh" >&2
+  echo "如果 Docker 镜像拉不动，使用：OPDS_CN_OFFLINE=/path/images.tar.zst bash install-cn.sh" >&2
+  exit "$code"
+}
+trap on_error ERR
+
 INSTALL_DIR="${OPDS_INSTALL_DIR:-${HOME}/opendeepseek-cn}"
 GITEE_REPO="${OPDS_CN_GITEE_REPO:-https://gitee.com/luoxueai/opendeepseek.git}"
 GITCODE_REPO="${OPDS_CN_GITCODE_REPO:-https://gitcode.com/mouxue56-debug/opendeepseek.git}"
@@ -84,7 +93,9 @@ set_env_value() {
 
 repo_reachable() {
   local repo="$1"
-  git ls-remote --heads "${repo}" HEAD >/dev/null 2>&1
+  local refs
+  refs="$(git ls-remote --heads "${repo}" main master 2>/dev/null || true)"
+  [[ -n "${refs}" ]]
 }
 
 choose_repo() {

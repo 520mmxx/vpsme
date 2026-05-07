@@ -54,7 +54,11 @@ probe_url() {
 probe_git() {
   local label="$1"
   local repo="$2"
-  if command -v git >/dev/null 2>&1 && git ls-remote --heads "${repo}" HEAD >/dev/null 2>&1; then
+  local refs=""
+  if command -v git >/dev/null 2>&1; then
+    refs="$(git ls-remote --heads "${repo}" main master 2>/dev/null || true)"
+  fi
+  if [[ -n "${refs}" ]]; then
     ok "${label} Git 仓库可达：${repo}"
   else
     warn "${label} Git 仓库不可达：${repo}"
