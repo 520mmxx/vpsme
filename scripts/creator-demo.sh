@@ -38,6 +38,7 @@ CRON_NEW_ID=""
 cleanup() {
   if [[ -n "$PORTAL_PID" ]]; then
     kill "$PORTAL_PID" >/dev/null 2>&1 || true
+    wait "$PORTAL_PID" >/dev/null 2>&1 || true
   fi
   if [[ -n "$DEMO_LOCAL_FILE" && -f "$DEMO_LOCAL_FILE" ]]; then
     rm -f "$DEMO_LOCAL_FILE" || true
