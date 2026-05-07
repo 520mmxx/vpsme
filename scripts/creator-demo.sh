@@ -99,6 +99,13 @@ http_code() {
   curl -L -sS -o /dev/null -w "%{http_code}" --connect-timeout 8 --max-time 20 "$1" 2>/dev/null || true
 }
 
+raw_installer_ok() {
+  local url="$1"
+  local out="$2"
+  curl -L -sS -o "$out" --connect-timeout 8 --max-time 30 "$url" 2>/dev/null \
+    && grep -q "OpenDeepSeek CN smart installer" "$out"
+}
+
 container_status() {
   docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$1" 2>/dev/null || true
 }
@@ -225,11 +232,13 @@ case "$code" in
   200|301|302) pass "HTTP ${code}" ;;
   *) fail "Gitee 镜像不可达：HTTP ${code:-000}" "去 https://gitee.com/projects/import/url 创建/同步 luoxueai/opendeepseek，或临时设置 OPDS_GITEE_PROJECT_URL。" ;;
 esac
-raw_code="$(http_code "$GITEE_RAW_URL")"
-case "$raw_code" in
-  200) pass "Gitee raw install-cn.sh 可访问" ;;
-  *) fail "Gitee 仓库存在，但 install-cn.sh 不可达：HTTP ${raw_code:-000}" "请把 GitHub main 同步/推送到 Gitee，并确认 ${GITEE_RAW_URL} 能打开。" ;;
-esac
+raw_installer="$TMP_DIR/gitee-install-cn.sh"
+if raw_installer_ok "$GITEE_RAW_URL" "$raw_installer"; then
+  pass "Gitee raw install-cn.sh 可下载且内容正确"
+else
+  raw_code="$(http_code "$GITEE_RAW_URL")"
+  fail "Gitee 仓库存在，但 install-cn.sh 不可用：HTTP ${raw_code:-000}" "请把 GitHub main 同步/推送到 Gitee，并确认 ${GITEE_RAW_URL} 能打开。"
+fi
 record_step "02-gitee"
 
 next_step "Docker stack"
