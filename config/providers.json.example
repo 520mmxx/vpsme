@@ -1,0 +1,19 @@
+{
+  "opendeepseek": {
+    "name": "OpenDeepSeek",
+    "type": "openai",
+    "api_url": "https://YOUR_DOMAIN.com/v1",
+    "api_key": "your-api-key-here",
+    "models": [
+      "GPT-5.4", "GPT-5.5", "GPT-5.4 Mini", "GPT-5.4 Nano",
+      "GPT-5.2 Pro", "GPT-5.4 Pro", "GPT-5.5 Pro", "O3-pro",
+      "ClaudeSonnet 4.6", "Claude Opus 4.8", "Claude Opus 4.7",
+      "Claude Opus 4.6", "Claude Haiku 4.5",
+      "Gemini 3 Flash Preview", "Gemini 3.1 Pro Preview",
+      "Gemini 3.1 Flash Lite", "Gemini 3.5 Flash",
+      "DeepSeek V4 Pro", "DeepSeek V4 Flash",
+      "Trinity Large Thinking", "Minimax M2.7", "Minimax M3",
+      "Kimi K2.6", "Grok 4.20 Reasoning", "Grok 4.20"
+    ]
+  }
+}

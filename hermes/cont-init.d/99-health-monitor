@@ -1,0 +1,14 @@
+#!/command/with-contenv sh
+set -eu
+
+HERMES_HOME="${HERMES_HOME:-/opt/data}"
+MONITOR_SCRIPT="/opt/hermes/health_monitor.py"
+
+if [ ! -f "$MONITOR_SCRIPT" ]; then
+    echo "[health-monitor] Script not found at $MONITOR_SCRIPT — skipping"
+    exit 0
+fi
+
+echo "[health-monitor] Starting background health monitor (72h interval)..."
+nohup python3 "$MONITOR_SCRIPT" >> "$HERMES_HOME/logs/health_monitor.log" 2>&1 &
+echo "[health-monitor] Started PID $!"

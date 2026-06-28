@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenDeepSeek Hermes Agent 升级报告</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.7; padding: 20px; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .header { text-align: center; padding: 40px 0; border-bottom: 1px solid #1e293b; margin-bottom: 40px; }
+  .header h1 { font-size: 2.2em; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .subtitle { color: #94a3b8; margin-top: 8px; font-size: 1.1em; }
+  .card { background: #1e293b; border-radius: 16px; padding: 28px; margin-bottom: 28px; border: 1px solid #334155; }
+  .card h2 { font-size: 1.4em; color: #60a5fa; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #334155; }
+  .card h3 { color: #94a3b8; margin: 16px 0 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #334155; }
+  th { background: #0f172a; color: #60a5fa; font-weight: 600; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+  .tag-green { background: #065f46; color: #6ee7b7; }
+  .tag-red { background: #7f1d1d; color: #fca5a5; }
+  .tag-blue { background: #1e3a5f; color: #93c5fd; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .stat-box { background: #0f172a; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #334155; }
+  .stat-box .value { font-size: 2em; font-weight: 700; color: #60a5fa; }
+  .stat-box .label { font-size: 0.85em; color: #64748b; margin-top: 4px; }
+  pre { background: #0f172a; padding: 16px; border-radius: 10px; overflow-x: auto; font-size: 0.9em; border: 1px solid #334155; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .mermaid-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .footer { text-align: center; padding: 30px; color: #475569; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Hermes Agent 升级报告</h1>
+    <p class="subtitle">v2026.4.23 → v2026.5.29.2  |  2026-06-06</p>
+  </div>
+
+  <!-- 升级概览 -->
+  <div class="card">
+    <h2>升级结果概览</h2>
+    <div class="grid-3">
+      <div class="stat-box"><div class="value" style="color:#6ee7b7;">✅</div><div class="label">升级状态</div><div style="color:#6ee7b7;font-weight:600;">成功</div></div>
+      <div class="stat-box"><div class="value" style="color:#60a5fa;">7/7</div><div class="label">容器健康</div><div style="color:#6ee7b7;font-weight:600;">全部正常</div></div>
+      <div class="stat-box"><div class="value" style="color:#fbbf24;">-41%</div><div class="label">镜像体积缩减</div><div style="color:#fbbf24;font-weight:600;">7.88G → 4.65G</div></div>
+    </div>
+  </div>
+
+  <!-- 版本对比 -->
+  <div class="card">
+    <h2>版本对比</h2>
+    <table>
+      <tr><th>项目</th><th>升级前</th><th>升级后</th></tr>
+      <tr><td>镜像标签</td><td><code>v2026.4.23</code></td><td><code><strong>v2026.5.29.2</strong></code></td></tr>
+      <tr><td>镜像大小</td><td>7.88 GB</td><td><strong>4.65 GB</strong> <span style="color:#6ee7b7;">▼ 41%</span></td></tr>
+      <tr><td>运行状态</td><td><span class="tag tag-green">healthy</span></td><td><span class="tag tag-green">healthy</span></td></tr>
+      <tr><td>API 端点</td><td><span class="tag tag-green">✅</span></td><td><span class="tag tag-green">✅</span></td></tr>
+      <tr><td>桥接服务</td><td><span class="tag tag-green">healthy</span></td><td><span class="tag tag-green">healthy</span></td></tr>
+    </table>
+  </div>
+
+  <!-- 思维导图 -->
+  <div class="card">
+    <h2>架构思维导图</h2>
+    <pre class="mermaid">
+mindmap
+  root((OpenDeepSeek<br/>v0.6.0))
+    Hermes Agent<br/>v2026.5.29.2
+      Gateway API :8642
+      Chat Completions
+      Tool Execution
+      File /host Access
+      Memory / Cron
+      Skills 技能系统
+    Open WebUI :3000
+      聊天界面
+      Prompt 库
+      Knowledge RAG
+      多用户管理
+    Smart Bridge :8770
+      路由编排
+      Agent 分发
+      Artifact 管理
+    LLM Proxy :8000
+      请求转发
+      错误重试
+      负载均衡
+    AI 后端
+      GPT-5.4-Mini
+      GPT-5.5-Pro
+      genspark.ai
+      自定义 API
+    Gateway 层
+      Kiro Gateway :7057
+      Proxy Pool :7777
+      genspark-proxy
+    </pre>
+  </div>
+
+  <!-- 数据流图 -->
+  <div class="card">
+    <h2>数据流图</h2>
+    <pre class="mermaid">
+flowchart TB
+    U((用户))
+    W["Open WebUI<br/>:3000"]
+    B["Smart Bridge<br/>:8770"]
+    H["Hermes Agent<br/>:8642"]
+    L["LLM Proxy<br/>:8000"]
+    G["genspark-proxy"]
+    A["AI API 后端"]
+    F[(agent-files)]
+    D[(hermes-data)]
+
+    U -->|浏览器| W
+    W -->|OpenAI API| B
+    B -->|Agent 任务| H
+    B -->|轻量问答| L
+    H -->|推理| L
+    L --> G
+    G -->|host 网络| A
+    H -->|文件读写| F
+    H -->|持久化| D
+    </pre>
+  </div>
+
+  <!-- 资源分析 -->
+  <div class="card">
+    <h2>容器资源分析</h2>
+    <div class="grid-2">
+      <div>
+        <h3>内存占比 (MB)</h3>
+        <pre class="mermaid">
+pie title Docker 容器内存占比 (MB)
+    "Open WebUI" : 955
+    "Hermes Agent" : 235
+    "LLM Proxy" : 64
+    "Kiro Gateway" : 42
+    "genspark-proxy" : 40
+    "Smart Bridge" : 23
+    "Proxy Pool" : 26
+    "BigBat" : 1
+        </pre>
+      </div>
+      <div>
+        <h3>所有服务状态</h3>
+        <pre class="mermaid">
+gantt
+    title 容器健康状态
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m-%d
+    section 核心服务
+    Hermes Agent           :done, 2026-06-06, 1d
+    Open WebUI             :done, 2026-06-06, 1d
+    Smart Bridge           :done, 2026-06-06, 1d
+    LLM Proxy              :done, 2026-06-06, 1d
+    section 代理层
+    Kiro Gateway           :done, 2026-06-06, 1d
+    Proxy Pool             :done, 2026-06-06, 1d
+    genspark-proxy         :done, 2026-06-06, 1d
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使用教程 -->
+  <div class="card">
+    <h2>使用教程</h2>
+    <div class="grid-2">
+      <div>
+        <h3>服务访问</h3>
+        <table>
+          <tr><th>服务</th><th>地址</th></tr>
+          <tr><td>Open WebUI</td><td><code>http://localhost:3000</code></td></tr>
+          <tr><td>Hermes API</td><td><code>http://localhost:8642</code></td></tr>
+          <tr><td>Smart Bridge</td><td><code>http://localhost:8770</code></td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>常用命令</h3>
+        <pre><code># 查看日志
+docker compose logs -f
+
+# 重启服务
+docker compose restart hermes
+
+# 停止/启动
+docker compose down
+docker compose up -d</code></pre>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+      <h3>API 调用示例</h3>
+      <pre><code># 聊天
+curl -X POST http://localhost:8642/v1/chat/completions \
+  -H "Authorization: Bearer mm000852" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "hermes-agent",
+    "messages": [{"role": "user", "content": "你好"}]
+  }'</code></pre>
+    </div>
+  </div>
+
+  <!-- 升级备忘 -->
+  <div class="card">
+    <h2>未来升级步骤</h2>
+    <pre><code>cd ~/opendeepseek
+
+# 1. 拉取最新代码
+git pull origin main
+
+# 2. 修改 docker-compose.yml 中的 Hermes 镜像标签
+
+# 3. 拉取新镜像并重启
+docker compose pull hermes
+docker compose up -d hermes
+
+# 4. 重启桥接
+docker compose restart hermes-bridge
+
+# 5. 验证
+curl http://localhost:8642/health</code></pre>
+  </div>
+
+  <div class="footer">
+    OpenDeepSeek · Hermes Agent 升级报告 · 由 AI 自动生成
+  </div>
+</div>
+<script>mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{primaryColor:'#1e3a5f',primaryTextColor:'#e2e8f0',primaryBorderColor:'#60a5fa',lineColor:'#60a5fa',secondaryColor:'#1e293b',tertiaryColor:'#0f172a'}});</script>
+</body>
+</html>
