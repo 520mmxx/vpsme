@@ -1,359 +1,296 @@
-# OpenDeepSeek 架构深度文档
+# 🏗️ 系统架构文档
 
-> 面向开发者、贡献者和想要 fork 本项目的人。  
-> 版本：v0.4.2 | 最后更新：2026-05-04
-
----
-
-## 1. 设计哲学
-
-OpenDeepSeek 的默认架构不是“Open WebUI + 任意 LLM”，而是三件套，中间多一层很薄的智能桥接适配：
-
-```
-普通问答：Open WebUI → Smart Bridge → DeepSeek V4
-真任务：  Open WebUI → Smart Bridge → Hermes Agent → DeepSeek V4
-```
-
-三层各司其职：
-
-- **Open WebUI**：用户体验层，提供网页、PWA、桌面 App、知识库、上传、多用户管理。
-- **Smart Bridge**：适配层，处理 Open WebUI 上传的 `image_url` 图片；同时做轻量路由，普通问答直连 DeepSeek，真任务进入 Hermes Agent。
-- **Hermes Agent**：Agent 内核层，提供 Memory、Skills、Cron、Subagent、IM 桥接和工具调度。
-- **DeepSeek V4**：模型层，提供 `deepseek-v4-flash` / `deepseek-v4-pro` 推理能力。
-
-项目初心是让用户在 Open WebUI 里说“30 分钟后提醒我喝水”，请求真的进入 Hermes Cron skill，而不是只让模型口头答应。Hermes 必须保留在默认架构中；但“你好/翻译/解释一下”这类普通问答不需要背着完整工具上下文跑，所以由 Smart Bridge 直连 DeepSeek，降低延迟和 token 消耗。
+> 完整架构说明：容器拓扑、数据流、网络策略、自动修复机制
 
 ---
 
-## 2. 架构总览
+## 一、网络拓扑
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                      终端层                               │
-│   浏览器 / 手机 PWA / 桌面 App                            │
-└───────────────────────────┬──────────────────────────────┘
-                            │ HTTP :3000
-┌───────────────────────────▼──────────────────────────────┐
-│              Open WebUI v0.9.2（体验层）                  │
-│   • 对话历史 / 知识库 RAG / 上传 / 多模态                  │
-│   • 中文界面 / PWA / 桌面 App                              │
-│   • 把 hermes-agent 当 OpenAI-compatible model backend     │
-│   • OPENAI_API_BASE_URL=http://hermes-bridge:8765/v1       │
-└───────────────────────────┬──────────────────────────────┘
-                            │ Docker 内网 :8765
-┌───────────────────────────▼──────────────────────────────┐
-│              Hermes Smart Bridge（适配 + 路由层）         │
-│   • 保存图片到 /host/OpenDeepSeek-Inputs                  │
-│   • OCR 中文/英文截图文字                                  │
-│   • 把 image_url 改写成纯文本路径 + OCR 摘要               │
-│   • 普通问答 → DeepSeek V4 Flash（thinking 默认关闭）      │
-│   • 文件/提醒/记忆/图片/工具 → Hermes Agent                │
-└──────────────┬────────────────────────────┬──────────────┘
-               │ 普通问答 HTTPS             │ 真任务 Docker 内网 :8642
-┌──────────────▼──────────────────┐ ┌───────▼──────────────────────────┐
-│ DeepSeek V4 Flash（轻量路径）    │ │ Hermes Agent v2026.4.23（内核层） │
-│ • 低延迟 / 低 token              │ │ • Memory / Skills / Cron          │
-│ • SSE stream 原样透传            │ │ • Subagent / IM Bridge            │
-└─────────────────────────────────┘ │ • provider: deepseek              │
-                                    │ • 对外暴露 hermes-agent model      │
-                                    └───────┬──────────────────────────┘
-                                            │ HTTPS api.deepseek.com
-┌───────────────────────────────────────────▼──────────────┐
-│                    DeepSeek V4（Agent 路径模型层）        │
-│   • deepseek-v4-flash：默认，快速便宜                      │
-│   • deepseek-v4-pro：复杂推理                              │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Internet
+        USERS[用户浏览器 / 手机]
+        TG[Telegram API<br/>api.telegram.org]
+        QQ[QQ Bot API<br/>api.sgroup.qq.com]
+    end
 
-可选：
+    subgraph DNS
+        CNAME[CNAME 记录<br/>domain → tunnel-id.cfargotunnel.com]
+        CF_IP[Cloudflare Edge<br/>104.21.46.97<br/>172.67.137.88]
+    end
 
-┌──────────────────┐
-│ SearXNG          │
-│ --profile full   │
-│ :8889 → :8080    │
-└──────────────────┘
-```
+    subgraph VPS_SERVER["VPS 服务器 (38.252.8.200)"]
+        subgraph NET["网络层"]
+            direction LR
+            WARP["sing-box WARP<br/>WireGuard 隧道<br/>allowed_ips: 0.0.0.0/0"]
+            TUN["cloudflared tunnel<br/>ID: 5363ecdd"]
+            NGINX_SYS["system nginx<br/>端口 14333"]
+        end
 
-默认启动命令：
+        subgraph DOCKER["Docker 容器"]
+            NGINX_D["🐳 nginx<br/>80 / 443 SSL"]
+            
+            subgraph FRONTEND["前端层"]
+                WEBUI["Open WebUI<br/>端口 3000<br/>UI / 知识库 / 多模态"]
+                ONBOARD["Onboarding Portal<br/>端口 7070"]
+            end
 
-```bash
-docker compose up -d
-```
+            subgraph GATEWAY["网关层"]
+                HERMES["Hermes Gateway<br/>端口 8642<br/>Telegram + QQ Bot"]
+                BRIDGE["Smart Bridge<br/>端口 8770<br/>路由 + OCR"]
+                LLMPROXY["LLM Proxy<br/>端口 8000<br/>模型映射]
+            end
 
-启用自托管搜索：
+            subgraph UPSTREAM["上游代理层"]
+                GSPARK["genspark-proxy<br/>端口 7056<br/>→ genspark.ai"]
+                KIRO["kiro-gateway<br/>端口 7057<br/>多模型路由"]
+                POOL["proxy-pool<br/>端口 7777"]
+            end
 
-```bash
-docker compose --profile full up -d
+            subgraph MONITOR["运维层"]
+                HEALTH["🩺 health_monitor<br/>72h 循环检测"]
+                OLLAMA["ollama<br/>端口 11434"]
+            end
+        end
+    end
+
+    USERS -->|https://domain.com| CNAME
+    CNAME --> CF_IP
+    CF_IP -->|TLS 隧道| TUN
+    TUN --> NGINX_D
+    NGINX_D -->|/v1/*| LLMPROXY
+    NGINX_D -->|/*| WEBUI
+    TG -->|polling| HERMES
+    QQ -->|wss://| HERMES
+    WEBUI --> BRIDGE --> HERMES
+    WEBUI --> LLMPROXY
+    HERMES --> LLMPROXY
+    
+    LLMPROXY --> GSPARK
+    LLMPROXY --> KIRO
+    GSPARK -->|HTTP| WARP -->|加密| INTERNET
+    
+    subgraph INTERNET["互联网"]
+        GENSPARK["genspark.ai<br/>上游 AI API"]
+    end
+    
+    HEALTH -.->|每 72h| HERMES
+    HEALTH -.->|掉线重启| TUN
 ```
 
 ---
 
-## 3. 一次请求的生命周期
+## 二、容器拓扑
 
-### 3.1 普通问答轻量路径
+```mermaid
+flowchart LR
+    subgraph DOCKER_HOST["Docker Host (network_mode: host)"]
+        direction TB
+        NGX["nginx<br/>80/443"]
+        GP["genspark-proxy<br/>7056"]
+        BP["bigbat<br/>7055"]
+        KG["kiro-gateway<br/>7057"]
+        PP["proxy-pool<br/>7777"]
+        HM["hermes<br/>8642"]
+        OLL["ollama<br/>11434"]
+    end
 
-以用户输入“用一句话解释 OpenDeepSeek 是什么”为例：
+    subgraph DOCKER_BRIDGE["Docker Bridge Network (opendeepseek-network)"]
+        LP["llm-proxy<br/>8000"]
+        HB["hermes-bridge<br/>8765"]
+        WU["open-webui<br/>8080"]
+        SX["searxng<br/>8080"]
+    end
 
-| 步骤 | 发生了什么 | 关键点 |
-|---|---|---|
-| 1 | 浏览器向 Open WebUI `:3000` 发送消息 | 用户仍使用同一个界面 |
-| 2 | Open WebUI 调用 `http://hermes-bridge:8765/v1/chat/completions` | 模型仍显示为 `hermes-agent` |
-| 3 | Smart Bridge 判断没有图片、文件、提醒、记忆、工具意图 | 路由原因为 `simple-chat` |
-| 4 | Smart Bridge 直接调用 DeepSeek V4 Flash | `thinking` 默认关闭，避免 Flash 被误当思考模型 |
-| 5 | 如果 Open WebUI 请求 `stream=true`，Smart Bridge 按 SSE 流式透传 | 体验接近原生 Open WebUI |
-
-本地验证结果：
-
-```text
-普通问答：0.91s，prompt_tokens=16
-流式首包：0.69s
+    NGX --> LP
+    LP --> GP
+    LP --> KG
+    HM --> LP
+    HB --> HM
+    WU --> HB
+    WU --> LP
+    WU --> SX
 ```
-
-### 3.2 真任务 Agent 路径
-
-以用户在 Open WebUI 输入“明天早上 8 点提醒我提交周报”为例：
-
-| 步骤 | 发生了什么 | 关键点 |
-|---|---|---|
-| 1 | 浏览器向 Open WebUI `:3000` 发送消息 | 用户只面对 Web/PWA/桌面体验层 |
-| 2 | Open WebUI 调用 `http://hermes-bridge:8765/v1/chat/completions` | 模型 id 是 `hermes-agent` |
-| 3 | Smart Bridge 检测到提醒/文件/记忆/图片/工具关键词，或“今天/最新/早报/新闻/搜索/调研”等实时资讯意图 | 路由进入 Hermes |
-| 4 | 如有图片，Smart Bridge 本地落盘 + OCR | `image_url` 会变成 `/host/OpenDeepSeek-Inputs/...` 路径 + OCR 摘要 |
-| 5 | Hermes 解析请求、加载 SOUL.md、判断是否需要工具 | Cron/Memory/Skill 在这里生效 |
-| 6 | Hermes 用原生 `deepseek` provider 调 DeepSeek V4 | 使用 `.env` 中的 `DEEPSEEK_API_KEY` |
-| 7 | 如果 OpenWebUI 请求流式响应，Smart Bridge 会先发一条“已切到 Hermes Agent，请稍等”进度消息 | 用户不会误以为页面卡死 |
-| 8 | Smart Bridge 为 Hermes 任务提高输出预算，并默认关闭 Hermes 上游工具流式回传 | 避免长网页/PPT任务出现半截 tool call 或空回复 |
-| 9 | 如需提醒，Hermes 创建 Cron 任务并持久化 | 不是模型口头承诺 |
-| 10 | Hermes 返回结果，Open WebUI 渲染并保存对话 | 用户仍在熟悉的聊天界面里 |
-| 11 | 若回复包含 `/host/...`，Smart Bridge 追加本机可找路径和 `file://` 地址 | 小白不需要理解 Docker 路径映射 |
-
-这两条路径都是 smoke test 必须验证的核心路径。只检查网页能打开不够，必须确认轻量问答能直连、真任务能进 Hermes 并实际产生工具结果。
 
 ---
 
-## 4. 容器拓扑
+## 三、数据流
 
-### hermes
+```mermaid
+sequenceDiagram
+    participant User as 用户浏览器
+    participant CF as Cloudflare
+    participant Nginx as Nginx
+    participant LP as LLM Proxy
+    participant GP as genspark-proxy
+    participant GS as genspark.ai
+    participant HB as Hermes Bridge
+    participant HG as Hermes Gateway
+    participant TG as Telegram Bot
+    participant QQ as QQ Bot
 
-```yaml
-image: nousresearch/hermes-agent:v2026.4.23
-command: gateway run
-ports:
-  - "${BIND_HOST:-127.0.0.1}:8642:8642"
-environment:
-  - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-  - HERMES_INFERENCE_PROVIDER=deepseek
-  - DEFAULT_MODEL=${DEFAULT_MODEL:-deepseek-v4-flash}
-  - API_SERVER_ENABLED=true
-  - API_SERVER_KEY=${HERMES_API_KEY}
-  - API_SERVER_PORT=8642
+    rect rgb(200, 230, 255)
+        Note over User,GS: 普通聊天（Open WebUI 网页）
+        User->>CF: HTTPS 请求
+        CF->>Nginx: 解密 + 转发
+        Nginx->>HB: /v1/chat/completions
+        HB->>LP: 轻量路由
+        LP->>GP: 模型映射
+        GP->>GS: API 请求
+        GS-->>GP: 流式响应
+        GP-->>LP: 转发
+        LP-->>HB: 转发
+        HB-->>Nginx: 响应
+        Nginx-->>CF: 加密
+        CF-->>User: 显示结果
+    end
+
+    rect rgb(230, 255, 230)
+        Note over User,QQ: 机器人对话
+        TG->>HG: 轮询新消息
+        HG->>LP: 处理请求
+        LP->>GP: AI 推理
+        GP-->>LP: 结果
+        LP-->>HG: 回复
+        HG-->>TG: 发送消息
+
+        QQ->>HG: WebSocket 消息
+        HG->>LP: 处理请求
+        LP->>GP: AI 推理
+        GP-->>LP: 结果
+        LP-->>HG: 回复
+        HG-->>QQ: 发送消息
+    end
+
+    rect rgb(255, 230, 230)
+        Note over User,QQ: 健康检查（每 72h）
+        HM->>TG: GET /getMe
+        HM->>QQ: POST /getAppAccessToken
+        alt 失败
+            HM->>HG: 重启信号 (s6)
+        end
+    end
 ```
-
-Hermes 镜像首次启动会生成 `/opt/data/config.yaml`，默认 model 可能是 `anthropic/claude-opus-4.6`。因此 `setup.sh` 和 onboarding server 在 Hermes healthy 后会运行：
-
-```bash
-./scripts/hermes-fix-model.sh deepseek-v4-flash
-```
-
-这个修复会把 Hermes 内部默认 model 改成 DeepSeek V4，并重启 hermes 容器。
-
-### open-webui
-
-```yaml
-image: ghcr.io/open-webui/open-webui:0.9.2
-ports:
-  - "${BIND_HOST:-127.0.0.1}:3000:8080"
-environment:
-  - OPENAI_API_BASE_URL=http://hermes-bridge:8765/v1
-  - OPENAI_API_KEY=${HERMES_API_KEY}
-  - WEBUI_NAME=OpenDeepSeek
-  - DEFAULT_MODELS=hermes-agent
-  - WEBUI_AUTH=${WEBUI_AUTH:-false}
-depends_on:
-  hermes-bridge:
-    condition: service_healthy
-```
-
-Open WebUI 不直接保存 DeepSeek key。它只知道 Smart Bridge 地址和 `HERMES_API_KEY`。
-
-### hermes-bridge
-
-Open WebUI 上传图片时会把图片放进 OpenAI-style `image_url` content parts。DeepSeek V4 Flash 文本端点不应直接接收这些图片结构，否则会报：
-
-```text
-unknown variant `image_url`, expected `text`
-```
-
-因此 OpenDeepSeek 默认在 Open WebUI 和 Hermes 中间加 `hermes-bridge`：
-
-```
-Open WebUI → hermes-bridge → Hermes Agent → DeepSeek V4 Flash
-                │
-                ├─ 保存图片到 /host/OpenDeepSeek-Inputs
-                ├─ OCR 中文/英文截图文字
-                └─ 把 image_url 改写成纯文本路径 + OCR 摘要
-```
-
-这样普通用户可以继续上传证据图、截图、网页图；DeepSeek 仍然只负责文本推理和 Agent 规划，Hermes 负责真实文件/终端执行。
-
-### searxng
-
-```yaml
-profiles:
-  - "full"
-ports:
-  - "${BIND_HOST:-127.0.0.1}:8889:8080"
-```
-
-SearXNG 默认不启动。需要自托管联网搜索时再用 `--profile full`。
 
 ---
 
-## 5. 网络与端口
+## 四、自动修复流程
 
+```mermaid
+stateDiagram-v2
+    [*] --> Running: 容器启动
+    
+    Running --> CheckFailed: 72h 健康检查失败
+    Running --> OK: 检查通过
+    
+    CheckFailed --> Restarting: s6 发送 SIGTERM
+    
+    Restarting --> Connecting: 进程退出
+    Connecting --> Reconnected: Telegram 重连
+    Connecting --> Reconnected: QQ WebSocket 重连
+    
+    Reconnected --> Running: 全部平台就绪
+    
+    OK --> Running: 继续运行
+    Running --> Crashed: 进程崩溃
+    
+    Crashed --> Restarting: s6 自动拉起（<1s）
+    
+    note right of Restarting
+        Docker restart: unless-stopped
+        s6 监督: 自动拉起
+        健康监视器: 72h 深度检测
+    end note
 ```
-主机（宿主机）
-├── 127.0.0.1:3000 → open-webui:8080   用户入口
-├── 127.0.0.1:8642 → hermes:8642       Hermes OpenAI-compatible API（调试用）
-└── 127.0.0.1:8889 → searxng:8080      可选 full profile
-
-Docker 内部网络：opendeepseek-network
-├── open-webui    → hermes-bridge:8765
-├── hermes-bridge → hermes:8642
-├── hermes        → api.deepseek.com
-└── open-webui → searxng:8080          full profile 时
-```
-
-默认 `BIND_HOST=127.0.0.1`，只允许本机访问。需要手机、Tailscale 或公网访问时，先读 [SECURITY.md](SECURITY.md)，再考虑改成 `BIND_HOST=0.0.0.0` 并启用 `WEBUI_AUTH=true`。
 
 ---
 
-## 6. 状态与持久化
+## 五、端口映射表
 
-| 容器 | Docker 卷名 | 挂载路径 | 主要内容 |
-|---|---|---|---|
-| hermes | `hermes-data` | `/opt/data` | Memory / Skills / sessions / cron / config.yaml |
-| open-webui | `open-webui-data` | `/app/backend/data` | 用户、对话、知识库、上传文件 |
-
-执行 `docker compose down` 不会删除数据卷。执行 `docker compose down -v` 会删除数据卷，也会清空 Open WebUI 历史和 Hermes Memory。
-
----
-
-## 7. 配置要点
-
-`.env` 的核心变量：
-
-```env
-DEEPSEEK_API_KEY=sk-...
-DEFAULT_MODEL=deepseek-v4-flash
-HERMES_API_KEY=<random>
-WEBUI_SECRET_KEY=<random>
-WEBUI_AUTH=false
-BIND_HOST=127.0.0.1
-```
-
-### hermes-bridge
-
-```env
-ENABLE_LIGHTWEIGHT_ROUTING=true
-HERMES_AGENT_MAX_TOKENS=32768
-HERMES_AGENT_STREAM=false
-HERMES_PROGRESS_STREAM=true
-HERMES_MAX_ITERATIONS=24
-IMAGE_BRIDGE_TIMEOUT=600
-OPDS_REALTIME_SEARCH_ENABLED=true
-OPDS_REALTIME_SEARCH_URL=http://searxng:8080/search?q={query}&format=json
-OPDS_HOST_DISPLAY_PREFIX=/Users/yourname
-```
-
-- `HERMES_AGENT_MAX_TOKENS=32768` 给网页/PPT/长报告这类真任务保留足够输出空间；卡顿主要靠迭代/超时/容器资源上限控制。
-- `HERMES_MAX_ITERATIONS=24` 防止 Agent 被不可用工具或长任务带入几十轮循环，避免本机卡顿。
-- `HERMES_AGENT_STREAM=false` 是发布前的保守默认：先让 Hermes 工具链完整执行并验证产物，再把结果交回 OpenWebUI。后续如果做了可靠的 Agent 进度事件，再考虑开启流式 Agent 状态。
-- `HERMES_PROGRESS_STREAM=true` 让 OpenWebUI 在等待 Hermes 完整执行时先收到一条中文进度提示；Hermes 上游仍按非流式完成工具链。
-- `OPDS_REALTIME_SEARCH_ENABLED=true` 让 Bridge 对早报/最新资讯类任务先取 SearXNG 搜索快照，避免 Hermes 误调用未配置的 `web_search` 工具。
-- `OPDS_HOST_DISPLAY_PREFIX` 用来把容器路径 `/host/...` 转成用户电脑上的真实路径。
-
-模型切换：
-
-```env
-DEFAULT_MODEL=deepseek-v4-pro
-```
-
-兼容说明：`deepseek-chat` / `deepseek-reasoner` 将于 2026-07-24 弃用；出于兼容，目前分别对应 `deepseek-v4-flash` 的非思考 / 思考模式。OpenDeepSeek 默认使用官方新模型名。若旧 Hermes provider 暂时不识别新名，可临时把 `DEFAULT_MODEL` 改为 `deepseek-reasoner` 兜底，但这不是长期推荐配置。
-
-改完 `.env` 后使用：
-
-```bash
-docker compose down
-docker compose up -d
-./scripts/hermes-fix-model.sh deepseek-v4-pro
-```
-
-不要只用 `docker compose restart`，它不会重新加载 `.env`。
+| 端口 | 服务 | 协议 | 绑定 | 说明 |
+|------|------|------|------|------|
+| 80 | Nginx | HTTP | host | Cloudflare 代理入口 |
+| 443 | Nginx | HTTPS/SSL | host | Cloudflare 代理入口 |
+| 3000 | Open WebUI | HTTP | 0.0.0.0 | 用户界面 |
+| 8000 | LLM Proxy | HTTP | 127.0.0.1 | OpenAI 兼容 API |
+| 8642 | Hermes Gateway | HTTP | host | Agent API |
+| 8770 | Hermes Bridge | HTTP | 127.0.0.1 | Smart Bridge |
+| 7056 | genspark-proxy | HTTP | host | 上游代理 |
+| 7057 | kiro-gateway | HTTP | 127.0.0.1 | 多模型路由 |
+| 7777 | proxy-pool | HTTP | host | 代理池 |
+| 11434 | ollama | HTTP | host | 本地 LLM |
+| 14333 | system nginx | HTTP | host | sing-box 内部 |
 
 ---
 
-## 8. 验证标准
+## 六、镜像依赖图
 
-最小验证：
-
-```bash
-docker compose ps
-bash scripts/smoke-test.sh
+```mermaid
+graph TD
+    genspark-proxy --> proxy-pool
+    llm-proxy --> genspark-proxy
+    llm-proxy --> kiro-gateway
+    hermes --> llm-proxy
+    hermes-bridge --> hermes
+    hermes-bridge --> llm-proxy
+    open-webui --> hermes-bridge
+    open-webui --> llm-proxy
+    open-webui --> searxng
+    nginx --> llm-proxy
+    nginx --> open-webui
+    health_monitor -.-> hermes
 ```
-
-手动端到端验证：
-
-```bash
-HK=$(grep -m1 "^HERMES_API_KEY=" .env | cut -d= -f2-)
-docker compose exec -T -e HERMES_KEY="$HK" hermes-bridge python - <<'PY'
-import json, os, urllib.request
-
-payload = {
-    "model": "hermes-agent",
-    "messages": [{"role": "user", "content": "只回答两个大写英文字母：OK"}],
-    "max_tokens": 50,
-}
-req = urllib.request.Request(
-    "http://localhost:8765/v1/chat/completions",
-    data=json.dumps(payload).encode("utf-8"),
-    headers={
-        "Authorization": "Bearer " + os.environ["HERMES_KEY"],
-        "Content-Type": "application/json",
-    },
-)
-print(urllib.request.urlopen(req, timeout=180).read().decode("utf-8"))
-PY
-```
-
-如需验证图片上传链路，应从 `hermes-bridge` 发起或直接在 Open WebUI 上传图片；不要只测 Hermes 直连，因为直连不会覆盖 `image_url` 适配层。
-
-通过标准：
-
-- Open WebUI `http://localhost:3000` 可访问。
-- Hermes `http://localhost:8642/health` 可访问。
-- Smart Bridge `/health` 可访问。
-- `/v1/models` 暴露 `hermes-agent`。
-- `/v1/chat/completions` 有真实回复，且不是 `401` / `Error` 字符串。
-- `usage.prompt_tokens > 0`，说明请求真的走过 Hermes 内核。
-- Cron / Memory / Skill 至少一类能被自然语言触发。
 
 ---
 
-## 9. 已知限制
+## 七、安全边界
 
-| 限制 | 影响 | 处理 |
-|---|---|---|
-| Hermes 首次生成的 `config.yaml` 默认 model 不是 DeepSeek | DeepSeek API 会拒绝未知模型 | `scripts/hermes-fix-model.sh` 自动修复 |
-| `WEBUI_AUTH=false` 只在空数据卷首次启动时完全生效 | 已有 Open WebUI 数据时可能仍要求登录 | 需要切家庭模式时先备份，再决定是否 `docker compose down -v` |
-| Hermes Memory 默认是单实例共享 | 多人共用时记忆可能混在一起 | 家庭单用户默认可接受，团队部署需隔离实例或关闭共享记忆 |
-| SearXNG 部分引擎 warning | 日志有噪音 | 不影响主流搜索，可按需调 settings |
-| 修改 `.env` 后只 restart | 新变量不生效 | 用 `docker compose down && docker compose up -d` |
+```mermaid
+flowchart LR
+    subgraph PUBLIC["公网"]
+        CF["Cloudflare<br/>DDoS 防护<br/>WAF 规则"]
+    end
+
+    subgraph EDGE["边缘"]
+        TUN["Tunnel<br/>加密通道"]
+        direction LR
+        CF --> TUN
+    end
+
+    subgraph VPS["VPS 内部"]
+        direction TB
+        NG["Nginx<br/>SSL 终止"]
+        FW["127.0.0.1 绑定<br/>防火墙规则"]
+        ENV["环境变量<br/>密钥隔离"]
+        GI[".gitignore<br/>排除密钥文件"]
+        
+        TUN --> NG
+        NG --> FW
+    end
+
+    subgraph APP["应用层"]
+        API["API Key 认证<br/>Bearer Token"]
+        ISO["容器隔离<br/>只读挂载"]
+        
+        FW --> API
+        API --> ISO
+    end
+```
 
 ---
 
-## 10. 路线
+## 八、技术栈
 
-- Open WebUI Tools 一键导入，让 Cron / Memory / Skill 在 UI 中更可发现。
-- Memory 可视化，让用户看到“记住了什么”。
-- IM 桥接模板继续补齐钉钉、飞书、企微、QQ Bot 的最短路径。
-- PWA 安装体验继续强化，降低第一次使用门槛。
+| 层 | 技术 | 版本 |
+|----|------|------|
+| 运行时 | Python 3.13 | 容器内 |
+| 容器编排 | Docker Compose | v2 |
+| 反向代理 | nginx | latest |
+| 隧道 | cloudflared | latest |
+| 代理/VPN | sing-box + WARP | latest |
+| Agent 框架 | Hermes Agent | v2026.6.5 |
+| AI 代理 | genspark-proxy | 自制 |
+| 多模型路由 | kiro-gateway | v0.8 |
+| 用户界面 | Open WebUI | latest |
+| 搜索引擎 | SearXNG | latest |
+| 本地 LLM | ollama | latest |
